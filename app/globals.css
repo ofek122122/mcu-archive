@@ -142,43 +142,22 @@
 
 @layer utilities {
   /* ── Parallax layers ──────────────────────────────────────────────────────
-     `--scroll` (px, unitless) and `--velocity` are written by ParallaxBackdrop
-     on a single rAF-throttled scroll listener. Layers only ever change
-     `transform`, so they stay on the compositor and never trigger layout. */
-  .plx-deep {
-    transform: translate3d(0, calc(var(--scroll, 0) * -0.035px), 0);
+     ParallaxBackdrop writes every offset as a ready-made px value on a single
+     rAF-throttled listener (starfields are pre-wrapped modulo their tile size,
+     so they loop forever at any rate). Layers only ever change `transform`, so
+     they stay on the compositor and never trigger layout. */
+  .plx-star {
     will-change: transform;
   }
 
-  .plx-mid {
-    transform: translate3d(
-      0,
-      calc(var(--scroll, 0) * -0.11px + var(--velocity, 0) * -1.6px),
-      0
-    );
+  .plx-dust {
+    transform: translate3d(0, var(--dust, 0px), 0);
     will-change: transform;
   }
 
-  .plx-near {
-    transform: translate3d(
-      0,
-      calc(var(--scroll, 0) * -0.2px + var(--velocity, 0) * -2.6px),
-      0
-    );
+  .plx-drift {
+    transform: translate3d(0, calc(var(--drift, 0px) + var(--velocity, 0) * -2.4px), 0);
     will-change: transform;
-  }
-
-  /* Mobile GPUs get a much shallower parallax budget. */
-  @media (max-width: 768px) {
-    .plx-deep {
-      transform: translate3d(0, calc(var(--scroll, 0) * -0.015px), 0);
-    }
-    .plx-mid {
-      transform: translate3d(0, calc(var(--scroll, 0) * -0.045px), 0);
-    }
-    .plx-near {
-      transform: translate3d(0, calc(var(--scroll, 0) * -0.075px), 0);
-    }
   }
 
   /* ── Starfield ────────────────────────────────────────────────────────────
@@ -336,9 +315,9 @@
     transition-duration: 0.001ms !important;
   }
 
-  .plx-deep,
-  .plx-mid,
-  .plx-near,
+  .plx-star,
+  .plx-dust,
+  .plx-drift,
   .tilt {
     transform: none !important;
   }

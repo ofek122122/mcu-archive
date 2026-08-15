@@ -133,24 +133,36 @@ lib/
 
 ### Parallax
 
-`ParallaxBackdrop` renders three fixed layers that scroll at different rates to build depth:
+`ParallaxBackdrop` renders five fixed layers that move at different rates to build depth:
 
-| Layer | Contents | Rate |
-|---|---|---|
-| Deep | Cosmic gradient + two tiling starfields | 0.035× |
-| Mid | Nebulae, dimensional rifts, drifting embers | 0.11× + velocity |
-| Near | Bright foreground stars | 0.20× + velocity |
+| Layer | Contents | Rate | Bounding |
+|---|---|---|---|
+| Ground | Cosmic radial gradient | static | — |
+| Stars far | Tiling starfield, 300px tile | 0.15× | loops mod 300px |
+| Stars mid | Tiling starfield, 420px tile | 0.32× | loops mod 420px |
+| Stars near | Tiling starfield, 640px tile | 0.55× | loops mod 640px |
+| Dust | Drifting embers, two stacked copies | 0.45× | loops mod viewport |
+| Drift | Nebulae + dimensional rifts | 0.12× + velocity | clamped to 0.7 × viewport |
 
-A **single** rAF-throttled scroll listener writes two custom properties (`--scroll`,
-`--velocity`); every layer is a pure CSS `transform`, so the work stays on the compositor
-and never triggers layout. Velocity is smoothed toward the current scroll delta, which also
-decays it back to rest once scrolling stops.
+A **single** rAF-throttled scroll listener computes every offset and writes it as a
+ready-made px value; the layers are pure CSS `transform`s, so the work stays on the
+compositor and never triggers layout.
+
+**Why the offsets are wrapped, not raw.** A layer that paints a *background* can't just be
+translated by `scroll × rate` — on a long page that offset outgrows the element and exposes
+a hard edge at the bottom. Each starfield offset is therefore taken **modulo its own tile
+size**, so it loops seamlessly and the rate can be pushed as hard as you like. The ember
+field loops the same way against viewport height, using two stacked copies.
+
+Layers holding only positioned decoration (nebulae, rifts) paint no background and so have
+no edge to tear — but at a strong rate they would scroll out of frame permanently, so their
+travel is **clamped** instead.
 
 Because every layer is `position: fixed`, the backdrop adds no page height — it cannot
 cause layout shift or horizontal overflow.
 
-**Mobile** (≤768px) drops to roughly a third of the parallax depth and skips the
-velocity term entirely. `prefers-reduced-motion` disables parallax, tilt and drift outright.
+**Mobile** (≤768px) scales every rate to 0.45×, re-evaluated on resize so a rotated phone
+adapts without a reload. `prefers-reduced-motion` disables parallax, tilt and drift outright.
 
 ### Glassmorphism
 
