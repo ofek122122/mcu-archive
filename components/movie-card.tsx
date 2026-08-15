@@ -4,17 +4,20 @@ import Image from "next/image";
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { Check, Clock3, ExternalLink, Info, Plus } from "lucide-react";
 
-import { imdbUrl, type Phase, type TrackedMovie } from "@/lib/movies";
+import { imdbUrl } from "@/lib/movies";
+import type { Theme, TrackedMovie } from "@/lib/types";
 import { ImdbBadge } from "@/components/imdb-badge";
 
 type MovieCardProps = {
   movie: TrackedMovie;
-  phase: Phase;
+  theme: Theme;
   /** 1-based position in the full chronological slate. */
   order: number;
   watched: boolean;
   /** Stagger index for the load-in animation. */
   delay: number;
+  /** Eager-load above-the-fold posters so the LCP image isn't lazy. */
+  priority?: boolean;
   onToggle: (movie: TrackedMovie, next: boolean) => void;
   onOpen: (movie: TrackedMovie) => void;
 };
@@ -23,10 +26,11 @@ const MAX_TILT_DEG = 7;
 
 export function MovieCard({
   movie,
-  phase,
+  theme,
   order,
   watched,
   delay,
+  priority = false,
   onToggle,
   onOpen,
 }: MovieCardProps) {
@@ -82,10 +86,10 @@ export function MovieCard({
         className="glass glass-edge sheen relative flex h-full flex-col overflow-hidden rounded-xl"
         style={
           {
-            "--edge-from": `${phase.accent}${watched ? "cc" : "55"}`,
-            "--edge-to": `${phase.secondary}${watched ? "88" : "30"}`,
+            "--edge-from": `${theme.accent}${watched ? "cc" : "55"}`,
+            "--edge-to": `${theme.secondary}${watched ? "88" : "30"}`,
             boxShadow: watched
-              ? `0 18px 46px -22px ${phase.accent}99, 0 0 0 1px ${phase.accent}33`
+              ? `0 18px 46px -22px ${theme.accent}99, 0 0 0 1px ${theme.accent}33`
               : "0 18px 40px -28px rgba(0,0,0,0.9)",
           } as CSSProperties
         }
@@ -98,19 +102,19 @@ export function MovieCard({
               watched ? "saturate-150" : "opacity-90 grayscale-[0.35] group-hover:grayscale-0"
             }`}
             style={{
-              background: `linear-gradient(158deg, ${phase.accent}38 0%, ${phase.deep} 46%, #04040a 100%)`,
+              background: `linear-gradient(158deg, ${theme.accent}38 0%, ${theme.deep} 46%, #04040a 100%)`,
             }}
           >
             <div
               className="absolute inset-0"
               style={{
-                background: `radial-gradient(125% 70% at 50% 0%, ${phase.accent}33, transparent 66%)`,
+                background: `radial-gradient(125% 70% at 50% 0%, ${theme.accent}33, transparent 66%)`,
               }}
             />
             <div className="absolute inset-0 flex items-center justify-center">
               <span
                 className="outlined font-display text-[clamp(2.5rem,8vw,4.25rem)] leading-none tracking-tight select-none"
-                style={{ WebkitTextStrokeColor: phase.accent, opacity: 0.75 }}
+                style={{ WebkitTextStrokeColor: theme.accent, opacity: 0.75 }}
               >
                 {movie.initials}
               </span>
@@ -125,6 +129,7 @@ export function MovieCard({
               alt={`${movie.title} poster`}
               fill
               sizes="(max-width: 640px) 50vw, (max-width: 1280px) 33vw, 22vw"
+              priority={priority}
               className={`object-cover transition-all duration-500 ${
                 watched ? "saturate-125" : "opacity-90 grayscale-[0.3] group-hover:grayscale-0"
               }`}
@@ -160,7 +165,7 @@ export function MovieCard({
           {movie.upcoming ? (
             <span
               className="pointer-events-none absolute bottom-2 left-2 z-20 flex items-center gap-1 rounded-[3px] bg-void/75 px-1.5 py-0.5 font-mono text-[9px] tracking-wider uppercase backdrop-blur-sm"
-              style={{ color: phase.secondary }}
+              style={{ color: theme.secondary }}
             >
               <Clock3 className="size-2.5" />
               Soon
@@ -176,9 +181,9 @@ export function MovieCard({
             style={
               watched
                 ? {
-                    borderColor: phase.accent,
-                    backgroundColor: phase.accent,
-                    boxShadow: `0 0 16px ${phase.accent}aa`,
+                    borderColor: theme.accent,
+                    backgroundColor: theme.accent,
+                    boxShadow: `0 0 16px ${theme.accent}aa`,
                   }
                 : undefined
             }
@@ -216,7 +221,7 @@ export function MovieCard({
                 same height regardless of title length. */}
             <h3
               className="line-clamp-2 min-h-8 font-display text-[15px] leading-[1.05] tracking-wide uppercase transition-colors"
-              style={{ color: watched ? phase.accent : undefined }}
+              style={{ color: watched ? theme.accent : undefined }}
             >
               {movie.title}
             </h3>

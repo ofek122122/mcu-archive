@@ -4,10 +4,14 @@ A private, passcode-gated tracker for every Marvel Cinematic Universe film — P
 through Phase Six. Built with Next.js (App Router), TypeScript, Tailwind CSS, and Redis
 via Server Actions.
 
-An interactive cinematic timeline with a three-layer cosmic parallax backdrop,
-glassmorphic cards that tilt in 3D toward the cursor, phase-specific colour themes, and
-IMDb ratings and links on every film. No external movie APIs: the full 40-film slate,
-including all IMDb metadata, is hardcoded in `lib/movies.ts`.
+A private, passcode-gated tracker for **79 Marvel films** across Marvel Studios, Fox, Sony,
+Universal, New Line and Lionsgate.
+
+An interactive cinematic timeline with a multi-layer cosmic parallax backdrop, glassmorphic
+cards that tilt in 3D toward the cursor, per-franchise colour themes, character filtering,
+a stats dashboard with unlockable achievements, and IMDb ratings and links on every film.
+No external movie APIs at runtime: the whole catalog, including all IMDb metadata, is
+hardcoded in `lib/catalog-*.ts`.
 
 ---
 
@@ -108,24 +112,69 @@ films (`iron-man`, `avengers-endgame`, …).
 
 ```
 app/
-  actions.ts        Server Actions — login, logout, toggle watched
+  actions.ts        Server Actions — login, logout, toggle, batch toggle
   page.tsx          Auth check → passcode gate or tracker
   layout.tsx        Fonts, metadata, parallax backdrop mount
   globals.css       Tailwind v4 theme, glass + parallax utilities, keyframes
 components/
-  parallax-backdrop.tsx  Three-layer cosmic parallax (client)
+  parallax-backdrop.tsx  Multi-layer cosmic parallax (client)
   passcode-gate.tsx      Passcode wall
-  tracker.tsx            Filter state, optimistic updates, cinematic timeline
-  progress-header.tsx    Sticky progress bar + completion percentage
-  filter-bar.tsx         Phase and status filters
+  tracker.tsx            Views, filters, URL sync, grouping, batch actions
+  progress-header.tsx    View nav, progress meter, Infinity Roulette
+  filter-bar.tsx         Search, status, studios, phases, sort, density
+  hero-rail.tsx          Quick-select character pills
   movie-card.tsx         Glass card, 3D tilt, poster, watched toggle
+  compact-list.tsx       High-density checklist mode
   movie-modal.tsx        Full metadata panel
+  roulette-modal.tsx     "What to watch next" cinematic reveal
+  stats-view.tsx         Dashboard + Infinity Vault achievements
   imdb-badge.tsx         IMDb wordmark + star rating chip
 lib/
-  movies.ts         The 40-film MCU slate, phase themes, IMDb metadata
+  types.ts          Shared domain types
+  catalog-mcu.ts    Marvel Studios, Phase One → Six (40 films)
+  catalog-marvel.ts Fox / Sony / Universal / New Line / Lionsgate (39 films)
+  movies.ts         Merges the catalogs, exposes helpers
+  universes.ts      Phase + franchise colour stories
+  heroes.ts         Character roster for the filter pills
+  posters.ts        Movie id → TMDB poster path
   kv.ts             Redis access (with in-memory dev fallback)
   auth.ts           Passcode hashing and session cookie
 ```
+
+---
+
+## Views and filtering
+
+**79 films** across Marvel Studios, 20th Century Fox, Sony, Universal, New Line and
+Lionsgate.
+
+| View | What it shows |
+|---|---|
+| **All Marvel** | The whole catalog, grouped into franchise chapters |
+| **MCU Timeline** | Marvel Studios only, with a **Release order / Story order** toggle |
+| **Stats & Vault** | Watch time, per-universe completion, achievement badges |
+
+"Story order" sorts by in-universe chronology (`chronoOrder`) rather than release date —
+*The First Avenger* → *Captain Marvel* → *Iron Man* → …
+
+**Filtering** stacks: a character pill, a text search across titles / heroes / villains /
+directors / studios, a studio multi-select, watched status, and six sort orders. Chapters
+collapse to a flat result list whenever a search or character filter is active, since
+grouping fragments results.
+
+**Batch actions** appear on every chapter header ("Mark all watched") and above flat result
+lists, writing through one variadic `SADD`/`SREM` rather than N round trips.
+
+**Infinity Roulette** draws a random *unwatched* film from whatever the current filter
+shows, so it respects the view you are in.
+
+### URL state
+
+Filter state lives in the query string, so any view is linkable — `?view=mcu&order=chrono`,
+`?hero=spider-man`, `?view=stats`, `?mode=compact&sort=rating-desc`. Only non-default
+values are written. Updates go through `history.replaceState` rather than a router
+navigation: this page is dynamically rendered, so `router.replace` would round-trip to the
+server on every keystroke.
 
 ---
 

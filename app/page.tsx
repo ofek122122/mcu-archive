@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+
 import { isAuthenticated } from "@/lib/auth";
 import { getWatchedMovies, isDatabaseConnected } from "@/lib/kv";
 import { withReleaseStatus } from "@/lib/movies";
@@ -15,6 +17,10 @@ export default async function HomePage() {
   const movies = withReleaseStatus();
 
   return (
-    <Tracker movies={movies} watched={watched} databaseConnected={isDatabaseConnected()} />
+    // Tracker reads its initial filter state from the URL via useSearchParams,
+    // which Next requires to sit inside a Suspense boundary.
+    <Suspense fallback={null}>
+      <Tracker movies={movies} watched={watched} databaseConnected={isDatabaseConnected()} />
+    </Suspense>
   );
 }

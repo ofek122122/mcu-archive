@@ -1,19 +1,30 @@
 "use client";
 
-import { Eye, EyeOff, Layers } from "lucide-react";
+import { ArrowDownUp, Eye, EyeOff, LayoutGrid, Layers, List, Search, X } from "lucide-react";
 
-import { PHASES, type PhaseId } from "@/lib/movies";
+import { PHASES, UNIVERSES } from "@/lib/universes";
+import type { PhaseId, UniverseId } from "@/lib/types";
 
-export type PhaseFilter = PhaseId | "all";
 export type StatusFilter = "all" | "watched" | "unwatched";
+export type PhaseFilter = PhaseId | "all";
+export type ViewMode = "posters" | "compact";
+export type TimelineOrder = "release" | "chrono";
+export type SortKey =
+  | "release-desc"
+  | "release-asc"
+  | "rating-desc"
+  | "rating-asc"
+  | "runtime-desc"
+  | "title-asc";
 
-type FilterBarProps = {
-  phase: PhaseFilter;
-  status: StatusFilter;
-  onPhaseChange: (phase: PhaseFilter) => void;
-  onStatusChange: (status: StatusFilter) => void;
-  resultCount: number;
-};
+export const SORT_OPTIONS: { value: SortKey; label: string }[] = [
+  { value: "release-asc", label: "Release — oldest" },
+  { value: "release-desc", label: "Release — newest" },
+  { value: "rating-desc", label: "IMDb — highest" },
+  { value: "rating-asc", label: "IMDb — lowest" },
+  { value: "runtime-desc", label: "Runtime — longest" },
+  { value: "title-asc", label: "Title — A to Z" },
+];
 
 const STATUS_OPTIONS: { value: StatusFilter; label: string; icon: typeof Eye }[] = [
   { value: "all", label: "All", icon: Layers },
@@ -21,44 +32,76 @@ const STATUS_OPTIONS: { value: StatusFilter; label: string; icon: typeof Eye }[]
   { value: "unwatched", label: "Unwatched", icon: EyeOff },
 ];
 
+type FilterBarProps = {
+  isMcuView: boolean;
+  query: string;
+  onQueryChange: (query: string) => void;
+  status: StatusFilter;
+  onStatusChange: (status: StatusFilter) => void;
+  universes: UniverseId[];
+  onUniversesChange: (universes: UniverseId[]) => void;
+  phase: PhaseFilter;
+  onPhaseChange: (phase: PhaseFilter) => void;
+  order: TimelineOrder;
+  onOrderChange: (order: TimelineOrder) => void;
+  sort: SortKey;
+  onSortChange: (sort: SortKey) => void;
+  mode: ViewMode;
+  onModeChange: (mode: ViewMode) => void;
+  resultCount: number;
+};
+
 export function FilterBar({
-  phase,
+  isMcuView,
+  query,
+  onQueryChange,
   status,
-  onPhaseChange,
   onStatusChange,
+  universes,
+  onUniversesChange,
+  phase,
+  onPhaseChange,
+  order,
+  onOrderChange,
+  sort,
+  onSortChange,
+  mode,
+  onModeChange,
   resultCount,
 }: FilterBarProps) {
+  function toggleUniverse(id: UniverseId) {
+    onUniversesChange(
+      universes.includes(id) ? universes.filter((u) => u !== id) : [...universes, id],
+    );
+  }
+
   return (
     <div className="glass border-b border-white/8">
-      <div className="mx-auto flex max-w-[1500px] flex-col gap-2.5 px-4 py-2.5 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
-        {/* Phase filter */}
-        <div
-          role="group"
-          aria-label="Filter by phase"
-          className="no-scrollbar -mx-1 flex items-center gap-1.5 overflow-x-auto px-1"
-        >
-          <FilterChip
-            active={phase === "all"}
-            onClick={() => onPhaseChange("all")}
-            accent="#edebe6"
-          >
-            All Phases
-          </FilterChip>
+      <div className="mx-auto flex max-w-[1500px] flex-col gap-2.5 px-4 py-2.5 sm:px-6">
+        {/* Row 1 — search, status, sort, density */}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative min-w-[180px] flex-1">
+            <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-mist/60" />
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => onQueryChange(event.target.value)}
+              placeholder="Search titles, heroes, villains…"
+              aria-label="Search films, heroes and villains"
+              className="w-full rounded-lg border border-white/10 bg-void/50 py-1.5 pr-7 pl-8 font-mono text-[11px] text-bone backdrop-blur-md transition-colors placeholder:text-mist/50 focus:border-arc focus:outline-none"
+            />
+            {query ? (
+              <button
+                type="button"
+                onClick={() => onQueryChange("")}
+                aria-label="Clear search"
+                className="absolute top-1/2 right-2 -translate-y-1/2 cursor-pointer text-mist hover:text-bone"
+              >
+                <X className="size-3.5" />
+              </button>
+            ) : null}
+          </div>
 
-          {PHASES.map((p) => (
-            <FilterChip
-              key={p.id}
-              active={phase === p.id}
-              onClick={() => onPhaseChange(p.id)}
-              accent={p.accent}
-            >
-              Phase {p.roman}
-            </FilterChip>
-          ))}
-        </div>
-
-        {/* Status filter */}
-        <div className="flex items-center justify-between gap-3">
           <div
             role="group"
             aria-label="Filter by status"
@@ -78,10 +121,55 @@ export function FilterBar({
                   }`}
                 >
                   <Icon className="size-3" />
-                  {option.label}
+                  <span className="hidden sm:inline">{option.label}</span>
                 </button>
               );
             })}
+          </div>
+
+          <label className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-void/50 px-2 py-1.5 backdrop-blur-md">
+            <ArrowDownUp className="size-3 text-mist" />
+            <span className="sr-only">Sort by</span>
+            <select
+              value={sort}
+              onChange={(event) => onSortChange(event.target.value as SortKey)}
+              className="cursor-pointer bg-transparent font-mono text-[10px] tracking-wider text-bone uppercase focus:outline-none"
+            >
+              {SORT_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value} className="bg-panel text-bone">
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <div
+            role="group"
+            aria-label="View density"
+            className="flex items-center gap-0.5 rounded-lg border border-white/10 bg-void/50 p-0.5 backdrop-blur-md"
+          >
+            <button
+              type="button"
+              aria-pressed={mode === "posters"}
+              onClick={() => onModeChange("posters")}
+              title="Cinematic posters"
+              className={`flex cursor-pointer items-center gap-1.5 rounded-md px-2.5 py-1.5 font-mono text-[10px] uppercase transition-colors ${
+                mode === "posters" ? "bg-bone text-void" : "text-mist hover:text-bone"
+              }`}
+            >
+              <LayoutGrid className="size-3" />
+            </button>
+            <button
+              type="button"
+              aria-pressed={mode === "compact"}
+              onClick={() => onModeChange("compact")}
+              title="Compact checklist"
+              className={`flex cursor-pointer items-center gap-1.5 rounded-md px-2.5 py-1.5 font-mono text-[10px] uppercase transition-colors ${
+                mode === "compact" ? "bg-bone text-void" : "text-mist hover:text-bone"
+              }`}
+            >
+              <List className="size-3" />
+            </button>
           </div>
 
           <span
@@ -91,12 +179,81 @@ export function FilterBar({
             {resultCount} {resultCount === 1 ? "film" : "films"}
           </span>
         </div>
+
+        {/* Row 2 — universe multi-select, or MCU phase + order controls */}
+        <div className="no-scrollbar -mx-1 flex items-center gap-1.5 overflow-x-auto px-1">
+          {isMcuView ? (
+            <>
+              <div className="flex shrink-0 items-center gap-0.5 rounded-lg border border-white/10 bg-void/50 p-0.5 backdrop-blur-md">
+                <button
+                  type="button"
+                  aria-pressed={order === "release"}
+                  onClick={() => onOrderChange("release")}
+                  className={`cursor-pointer rounded-md px-2.5 py-1.5 font-mono text-[10px] tracking-brand whitespace-nowrap uppercase transition-colors ${
+                    order === "release" ? "bg-bone text-void" : "text-mist hover:text-bone"
+                  }`}
+                >
+                  Release order
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={order === "chrono"}
+                  onClick={() => onOrderChange("chrono")}
+                  className={`cursor-pointer rounded-md px-2.5 py-1.5 font-mono text-[10px] tracking-brand whitespace-nowrap uppercase transition-colors ${
+                    order === "chrono" ? "bg-bone text-void" : "text-mist hover:text-bone"
+                  }`}
+                >
+                  Story order
+                </button>
+              </div>
+
+              <span className="shrink-0 px-1 text-white/15">|</span>
+
+              <Chip active={phase === "all"} accent="#edebe6" onClick={() => onPhaseChange("all")}>
+                All phases
+              </Chip>
+              {PHASES.map((item) => (
+                <Chip
+                  key={item.id}
+                  active={phase === item.id}
+                  accent={item.accent}
+                  onClick={() => onPhaseChange(item.id)}
+                >
+                  Phase {item.roman}
+                </Chip>
+              ))}
+            </>
+          ) : (
+            <>
+              <span className="shrink-0 pr-1 font-mono text-[9px] tracking-brand text-mist/60 uppercase">
+                Studios
+              </span>
+              <Chip
+                active={universes.length === 0}
+                accent="#edebe6"
+                onClick={() => onUniversesChange([])}
+              >
+                All studios
+              </Chip>
+              {UNIVERSES.map((universe) => (
+                <Chip
+                  key={universe.id}
+                  active={universes.includes(universe.id)}
+                  accent={universe.accent}
+                  onClick={() => toggleUniverse(universe.id)}
+                >
+                  {universe.label}
+                </Chip>
+              ))}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
-function FilterChip({
+function Chip({
   active,
   accent,
   onClick,

@@ -60,3 +60,27 @@ export async function setWatched(movieId: string, watched: boolean): Promise<voi
   if (watched) await redis.sadd(WATCHED_KEY, movieId);
   else await redis.srem(WATCHED_KEY, movieId);
 }
+
+/**
+ * Batch equivalent of `setWatched`, for "mark whole phase / franchise watched".
+ * One round trip instead of N — SADD and SREM are both variadic.
+ */
+export async function setWatchedMany(movieIds: string[], watched: boolean): Promise<void> {
+  if (movieIds.length === 0) return;
+
+  const redis = getClient();
+
+  if (!redis) {
+    for (const id of movieIds) {
+      if (watched) memoryStore.add(id);
+      else memoryStore.delete(id);
+    }
+    return;
+  }
+
+  // Split the head off so TypeScript sees the non-empty tuple that sadd/srem
+  // require; the early return above guarantees there is one.
+  const [first, ...rest] = movieIds;
+  if (watched) await redis.sadd(WATCHED_KEY, first, ...rest);
+  else await redis.srem(WATCHED_KEY, first, ...rest);
+}

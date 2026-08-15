@@ -80,6 +80,57 @@ export const POSTER_PATHS: Readonly<Record<string, string>> = {
   "spider-man-brand-new-day": "/iPOn6DinuVyLY17YM9mKuPofV08.jpg",
   "avengers-doomsday": "/bh2OuKvq19jBHsloUVCfPSZZw81.jpg",
   "avengers-secret-wars": "/f0YBuh4hyiAheXhh4JnJWoKi9g5.jpg",
+
+  // ── Fox — X-Men ──────────────────────────────────────────────────────────
+  "x-men": "/bRDAc4GogyS9ci3ow7UnInOcriN.jpg",
+  x2: "/bst4alFUXCxISwdRUKSMhhkrX1M.jpg",
+  "x-men-the-last-stand": "/a2xicU8DpKtRizOHjQLC1JyCSRS.jpg",
+  "x-men-origins-wolverine": "/yj8LbTju1p7CUJg7US2unSBk33s.jpg",
+  "x-men-first-class": "/hNEokmUke0dazoBhttFN0o3L7Xv.jpg",
+  "the-wolverine": "/t2wVAcoRlKvEIVSbiYDb8d0QqqS.jpg",
+  "x-men-days-of-future-past": "/tYfijzolzgoMOtegh1Y7j2Enorg.jpg",
+  "x-men-apocalypse": "/ikA8UhYdTGpqbatFa93nIf6noSr.jpg",
+  logan: "/fnbjcRDYn6YviCcePDnGdyAkYsB.jpg",
+  "dark-phoenix": "/cCTJPelKGLhALq3r51A9uMonxKj.jpg",
+  "the-new-mutants": "/xiDGcXJTvu1lazFRYip6g1eLt9c.jpg",
+
+  // ── Fox — Deadpool ───────────────────────────────────────────────────────
+  deadpool: "/3E53WEZJqP6aM84D8CckXx4pIHw.jpg",
+  "deadpool-2": "/to0spRl1CMDvyUbOnbb4fTk3VAd.jpg",
+
+  // ── Fox — Fantastic Four & Daredevil ─────────────────────────────────────
+  "fantastic-four-2005": "/4YMcYEFS8sFuW3soP1HVmgR3cSm.jpg",
+  "fantastic-four-rise-of-the-silver-surfer": "/9wRfzTcMyyzkQxVDqBHv8RwuZOv.jpg",
+  "fantastic-four-2015": "/cDroz5qSlP8xZ6tOpeYoPkBvKyL.jpg",
+  daredevil: "/oCDBwSkntYamuw8VJIxMRCtDBmi.jpg",
+  elektra: "/gC6s6NKHneSrOKyQZnUMb443RKU.jpg",
+
+  // ── Sony — Spider-Man ────────────────────────────────────────────────────
+  "spider-man-2002": "/or6XJBVpcEbIkma0V9zshnbEtx4.jpg",
+  "spider-man-2": "/aGuvNAaaZuWXYQQ6N2v7DeuP6mB.jpg",
+  "spider-man-3": "/sJMTTGjtjvrMZ7G0oP9D13wNUum.jpg",
+  "the-amazing-spider-man": "/jexoNYnPd6vVrmygwF6QZmWPFdu.jpg",
+  "the-amazing-spider-man-2": "/dGjoPttcbKR5VWg1jQuNFB247KL.jpg",
+  "spider-man-into-the-spider-verse": "/iiZZdoQBEYBv6id8su7ImL0oCbD.jpg",
+  "spider-man-across-the-spider-verse": "/8Vt6mWEReuy4Of61Lnj5Xj704m8.jpg",
+
+  // ── Sony — Venom, SSU & Ghost Rider ──────────────────────────────────────
+  venom: "/2uNW4WbgBXL25BAbXGLnLqX71Sw.jpg",
+  "venom-let-there-be-carnage": "/pzKsRuKLFmYrW5Q0q8E8G78Tcgo.jpg",
+  "venom-the-last-dance": "/vGXptEdgZIhPg3cGlc7e8sNPC2e.jpg",
+  morbius: "/Av8Z2jZhEm1FLkFzMThzz9hndJF.jpg",
+  "madame-web": "/rULWuutDcN5NvtiZi4FRPzRYWSh.jpg",
+  "kraven-the-hunter": "/1GvBhRxY6MELDfxFrete6BNhBB5.jpg",
+  "ghost-rider": "/4quwR1VwZouD0YF9AaD72kQAjxH.jpg",
+  "ghost-rider-spirit-of-vengeance": "/xEoBT6lYfQNpSpTm8gJMTrQytiw.jpg",
+
+  // ── Legacy — Blade, Hulk, Punisher ───────────────────────────────────────
+  blade: "/oWT70TvbsmQaqyphCZpsnQR7R32.jpg",
+  "blade-ii": "/yDHwo3eWcMiy5LnnEnlGV9iLu9k.jpg",
+  "blade-trinity": "/6f7iXvPOnf83MaLB1JmPzUor1rr.jpg",
+  "hulk-2003": "/UllIft2jLSBaay3zQyMV4GNdfy.jpg",
+  "the-punisher-2004": "/7rmA1HwYp2GKM85BL0cVwCaosGr.jpg",
+  "punisher-war-zone": "/oOvKJgYUIpfswGHAdW6159bPbvM.jpg",
 };
 
 /** Absolute poster URL for a film, or undefined to fall back to generated art. */

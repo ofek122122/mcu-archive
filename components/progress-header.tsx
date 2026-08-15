@@ -1,17 +1,29 @@
 "use client";
 
 import { useTransition } from "react";
-import { Database, DatabaseZap, LogOut } from "lucide-react";
+import { BarChart3, Clapperboard, Database, DatabaseZap, Dices, Layers, LogOut } from "lucide-react";
 
 import { logoutAction } from "@/app/actions";
-import { PHASES } from "@/lib/movies";
+import { PHASES } from "@/lib/universes";
+
+export type ViewId = "all" | "mcu" | "stats";
+
+const VIEWS: { id: ViewId; label: string; short: string; icon: typeof Layers }[] = [
+  { id: "all", label: "All Marvel", short: "All", icon: Layers },
+  { id: "mcu", label: "MCU Timeline", short: "MCU", icon: Clapperboard },
+  { id: "stats", label: "Stats & Vault", short: "Stats", icon: BarChart3 },
+];
 
 type ProgressHeaderProps = {
+  view: ViewId;
+  onViewChange: (view: ViewId) => void;
   watchedCount: number;
   total: number;
   /** Watched / total per phase id, used for the tick marks. */
   perPhase: Record<number, { watched: number; total: number }>;
   databaseConnected: boolean;
+  onRoulette: () => void;
+  rouletteDisabled: boolean;
 };
 
 /** Arc-reactor cyan → infinity purple → quantum red, mirroring the phase run. */
@@ -19,10 +31,14 @@ const METER_GRADIENT =
   "linear-gradient(90deg, #5ad2f4 0%, #3fdfd4 18%, #a970ff 46%, #ff3d5e 74%, #ff4f2a 100%)";
 
 export function ProgressHeader({
+  view,
+  onViewChange,
   watchedCount,
   total,
   perPhase,
   databaseConnected,
+  onRoulette,
+  rouletteDisabled,
 }: ProgressHeaderProps) {
   const [loggingOut, startLogout] = useTransition();
   const percent = total === 0 ? 0 : Math.round((watchedCount / total) * 100);
@@ -38,52 +54,89 @@ export function ProgressHeader({
 
   return (
     <header className="glass-strong border-b border-white/10">
-      <div className="mx-auto max-w-[1500px] px-4 pt-3.5 pb-3 sm:px-6">
-        <div className="flex items-end justify-between gap-4">
+      <div className="mx-auto max-w-[1500px] px-4 pt-3 pb-2.5 sm:px-6">
+        <div className="flex items-center justify-between gap-3">
           {/* Wordmark */}
-          <div className="flex items-center gap-2.5">
+          <div className="flex shrink-0 items-center gap-2.5">
             <span className="bg-marvel px-2 py-1 font-display text-base leading-none text-white -skew-x-6 shadow-[0_0_18px_rgba(226,54,54,0.5)]">
               MCU
             </span>
-            <span className="hidden font-display text-base leading-none tracking-wide text-bone uppercase sm:inline">
+            <span className="hidden font-display text-base leading-none tracking-wide text-bone uppercase lg:inline">
               Archive
             </span>
           </div>
 
-          {/* Counter */}
-          <div className="flex items-baseline gap-2 leading-none">
-            <span className="font-display text-3xl text-bone tabular-nums sm:text-4xl">
-              {watchedCount}
-            </span>
-            <span className="font-display text-lg text-mist/60 sm:text-xl">/</span>
-            <span className="font-display text-lg text-mist tabular-nums sm:text-xl">{total}</span>
-            <span className="ml-1 hidden font-mono text-[10px] tracking-brand text-mist uppercase sm:inline">
-              Watched
-            </span>
-          </div>
+          {/* View navigation */}
+          <nav
+            aria-label="Views"
+            className="no-scrollbar flex items-center gap-0.5 overflow-x-auto rounded-lg border border-white/10 bg-void/50 p-0.5 backdrop-blur-md"
+          >
+            {VIEWS.map((item) => {
+              const Icon = item.icon;
+              const active = view === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  aria-current={active ? "page" : undefined}
+                  onClick={() => onViewChange(item.id)}
+                  className={`flex shrink-0 cursor-pointer items-center gap-1.5 rounded-md px-2.5 py-1.5 font-display text-xs tracking-wider whitespace-nowrap uppercase transition-colors sm:px-3.5 sm:text-sm ${
+                    active ? "bg-bone text-void" : "text-mist hover:text-bone"
+                  }`}
+                >
+                  <Icon className="size-3.5" />
+                  <span className="hidden sm:inline">{item.label}</span>
+                  <span className="sm:hidden">{item.short}</span>
+                </button>
+              );
+            })}
+          </nav>
 
-          <div className="flex items-center gap-3">
+          {/* Right cluster */}
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+            {/* Infinity Roulette */}
+            <button
+              type="button"
+              onClick={onRoulette}
+              disabled={rouletteDisabled}
+              title={
+                rouletteDisabled
+                  ? "Nothing unwatched in this filter"
+                  : "Infinity Roulette — pick something to watch"
+              }
+              aria-label="Infinity Roulette"
+              className="group relative flex size-8 cursor-pointer items-center justify-center rounded-lg border border-gold/50 bg-gold/10 text-gold transition-all hover:bg-gold/20 hover:shadow-[0_0_22px_rgba(245,197,24,0.5)] disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-transparent disabled:text-mist/40 disabled:shadow-none sm:w-auto sm:gap-1.5 sm:px-3"
+            >
+              <Dices className="size-4 transition-transform group-enabled:group-hover:rotate-180 group-enabled:group-hover:duration-500" />
+              <span className="hidden font-display text-xs tracking-widest uppercase sm:inline">
+                Roulette
+              </span>
+            </button>
+
+            <div className="hidden items-baseline gap-1.5 leading-none md:flex">
+              <span className="font-display text-2xl text-bone tabular-nums">{watchedCount}</span>
+              <span className="font-display text-sm text-mist/60">/</span>
+              <span className="font-display text-sm text-mist tabular-nums">{total}</span>
+            </div>
+
+            <span className="font-display text-2xl text-arc tabular-nums [text-shadow:0_0_18px_rgba(90,210,244,0.55)]">
+              {percent}
+              <span className="text-sm text-arc/60">%</span>
+            </span>
+
             <span
               title={
                 databaseConnected
                   ? "Synced to Redis — changes appear on every device"
                   : "No Redis store linked yet — changes are in-memory only"
               }
-              className={`hidden items-center gap-1.5 font-mono text-[10px] tracking-brand uppercase sm:flex ${
-                databaseConnected ? "text-emerald-400/80" : "text-gold/80"
-              }`}
+              className={`hidden ${databaseConnected ? "text-emerald-400/80" : "text-gold/80"} xl:block`}
             >
               {databaseConnected ? (
                 <DatabaseZap className="size-3.5" />
               ) : (
                 <Database className="size-3.5" />
               )}
-              {databaseConnected ? "Synced" : "Local"}
-            </span>
-
-            <span className="font-display text-2xl text-arc tabular-nums sm:text-3xl [text-shadow:0_0_18px_rgba(90,210,244,0.55)]">
-              {percent}
-              <span className="text-base text-arc/60">%</span>
             </span>
 
             <button
@@ -99,7 +152,7 @@ export function ProgressHeader({
         </div>
 
         {/* Progress meter */}
-        <div className="relative mt-3 h-1.5 overflow-hidden rounded-full bg-white/8">
+        <div className="relative mt-2.5 h-1.5 overflow-hidden rounded-full bg-white/8">
           <div
             className="h-full rounded-full transition-[width] duration-500 ease-out"
             style={{

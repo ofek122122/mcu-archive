@@ -4,12 +4,13 @@ import Image from "next/image";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { Calendar, Check, Clapperboard, Clock3, ExternalLink, Plus, X } from "lucide-react";
 
-import { imdbUrl, type Phase, type TrackedMovie } from "@/lib/movies";
+import { imdbUrl } from "@/lib/movies";
+import type { Theme, TrackedMovie } from "@/lib/types";
 import { ImdbBadge } from "@/components/imdb-badge";
 
 type MovieModalProps = {
   movie: TrackedMovie;
-  phase: Phase;
+  theme: Theme;
   watched: boolean;
   onToggle: (movie: TrackedMovie, next: boolean) => void;
   onClose: () => void;
@@ -22,7 +23,7 @@ const DATE_FORMAT = new Intl.DateTimeFormat("en-GB", {
   timeZone: "UTC",
 });
 
-export function MovieModal({ movie, phase, watched, onToggle, onClose }: MovieModalProps) {
+export function MovieModal({ movie, theme, watched, onToggle, onClose }: MovieModalProps) {
   const closeRef = useRef<HTMLButtonElement>(null);
   const [artFailed, setArtFailed] = useState(false);
 
@@ -57,9 +58,9 @@ export function MovieModal({ movie, phase, watched, onToggle, onClose }: MovieMo
         className="glass-strong glass-edge animate-rise relative w-full max-w-2xl overflow-hidden rounded-t-2xl sm:rounded-2xl"
         style={
           {
-            "--edge-from": `${phase.accent}bb`,
-            "--edge-to": `${phase.secondary}66`,
-            boxShadow: `0 40px 120px -30px ${phase.accent}55`,
+            "--edge-from": `${theme.accent}bb`,
+            "--edge-to": `${theme.secondary}66`,
+            boxShadow: `0 40px 120px -30px ${theme.accent}55`,
           } as CSSProperties
         }
       >
@@ -67,7 +68,7 @@ export function MovieModal({ movie, phase, watched, onToggle, onClose }: MovieMo
         <div
           className="pointer-events-none absolute inset-0"
           style={{
-            background: `radial-gradient(90% 60% at 0% 0%, ${phase.accent}22, transparent 60%)`,
+            background: `radial-gradient(90% 60% at 0% 0%, ${theme.accent}22, transparent 60%)`,
           }}
         />
 
@@ -86,13 +87,13 @@ export function MovieModal({ movie, phase, watched, onToggle, onClose }: MovieMo
           <div
             className="relative aspect-[2/3] w-28 shrink-0 self-start overflow-hidden rounded-lg sm:w-40"
             style={{
-              background: `linear-gradient(158deg, ${phase.accent}38 0%, ${phase.deep} 46%, #04040a 100%)`,
+              background: `linear-gradient(158deg, ${theme.accent}38 0%, ${theme.deep} 46%, #04040a 100%)`,
             }}
           >
             <div className="absolute inset-0 flex items-center justify-center">
               <span
                 className="outlined font-display text-3xl leading-none select-none sm:text-4xl"
-                style={{ WebkitTextStrokeColor: phase.accent, opacity: 0.8 }}
+                style={{ WebkitTextStrokeColor: theme.accent, opacity: 0.8 }}
               >
                 {movie.initials}
               </span>
@@ -114,9 +115,9 @@ export function MovieModal({ movie, phase, watched, onToggle, onClose }: MovieMo
           <div className="min-w-0 flex-1">
             <p
               className="font-mono text-[10px] tracking-brand uppercase"
-              style={{ color: phase.accent }}
+              style={{ color: theme.accent }}
             >
-              {phase.label} <span className="text-mist/50">·</span> {phase.saga}
+              {theme.label} <span className="text-mist/50">·</span> {movie.studio}
             </p>
 
             <h2
@@ -131,7 +132,7 @@ export function MovieModal({ movie, phase, watched, onToggle, onClose }: MovieMo
               {movie.upcoming ? (
                 <span
                   className="rounded-[3px] border px-2 py-1 font-mono text-[10px] tracking-brand uppercase"
-                  style={{ borderColor: `${phase.secondary}66`, color: phase.secondary }}
+                  style={{ borderColor: `${theme.secondary}66`, color: theme.secondary }}
                 >
                   Unreleased
                 </span>
@@ -163,14 +164,14 @@ export function MovieModal({ movie, phase, watched, onToggle, onClose }: MovieMo
                 style={
                   watched
                     ? {
-                        backgroundColor: phase.accent,
+                        backgroundColor: theme.accent,
                         color: "#04040a",
-                        boxShadow: `0 0 24px ${phase.accent}66`,
+                        boxShadow: `0 0 24px ${theme.accent}66`,
                       }
                     : {
-                        border: `1px solid ${phase.accent}55`,
-                        color: phase.accent,
-                        backgroundColor: `${phase.accent}12`,
+                        border: `1px solid ${theme.accent}55`,
+                        color: theme.accent,
+                        backgroundColor: `${theme.accent}12`,
                       }
                 }
               >
