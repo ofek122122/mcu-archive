@@ -1,79 +1,94 @@
 /**
- * Persistence layer — a single Redis SET holding the ids of watched films.
+ * Persistence layer — one Redis SET per user holding the ids of watched films.
  *
- * Backed by Upstash Redis (the Vercel Marketplace replacement for Vercel KV).
- * Creating the store from your Vercel dashboard injects the connection env vars
- * automatically; see README.md.
+ * The key is `user:<userId>:watched_movies`, so every account keeps entirely
+ * separate progress. (Before accounts existed this was a single shared
+ * `user:watched_movies` set; `createUser` migrates that into the first account.)
  *
- * If no credentials are present the module falls back to an in-process set so
- * that `next build` and a bare `npm run dev` still work. That fallback is NOT a
+ * Falls back to an in-process store when no credentials are present so that
+ * `next build` and a bare `npm run dev` still work. That fallback is NOT a
  * database: it is per-instance and disappears on restart.
  */
-import { Redis } from "@upstash/redis";
+import { getClient } from "@/lib/redis";
 
-export const WATCHED_KEY = "user:watched_movies";
+export { isDatabaseConnected } from "@/lib/redis";
 
-/** `undefined` = not resolved yet, `null` = no credentials configured. */
-let cachedClient: Redis | null | undefined;
-
-/** Dev-only fallback store. */
-const memoryStore = new Set<string>();
-
-function getClient(): Redis | null {
-  if (cachedClient !== undefined) return cachedClient;
-
-  // Upstash sets the UPSTASH_* pair; Vercel-provisioned stores also mirror the
-  // legacy KV_* names, so accept either.
-  const url = process.env.UPSTASH_REDIS_REST_URL ?? process.env.KV_REST_API_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN;
-
-  cachedClient = url && token ? new Redis({ url, token }) : null;
-  return cachedClient;
+export function watchedKey(userId: string): string {
+  return `user:${userId}:watched_movies`;
 }
 
-/** True when a real Redis store is wired up. Surfaced in the UI as a badge. */
-export function isDatabaseConnected(): boolean {
-  return getClient() !== null;
+/** Dev-only fallback store, keyed the same way. */
+const memoryStore = new Map<string, Set<string>>();
+
+function memoryFor(userId: string): Set<string> {
+  const existing = memoryStore.get(userId);
+  if (existing) return existing;
+  const created = new Set<string>();
+  memoryStore.set(userId, created);
+  return created;
 }
 
-export async function getWatchedMovies(): Promise<string[]> {
+export async function getWatchedMovies(userId: string): Promise<string[]> {
   const redis = getClient();
-  if (!redis) return [...memoryStore];
+  if (!redis) return [...memoryFor(userId)];
 
   try {
-    return (await redis.smembers(WATCHED_KEY)) as unknown as string[];
+    return (await redis.smembers(watchedKey(userId))) as unknown as string[];
   } catch (error) {
     console.error("[kv] failed to read watched movies:", error);
-    return [...memoryStore];
+    return [...memoryFor(userId)];
   }
 }
 
-export async function setWatched(movieId: string, watched: boolean): Promise<void> {
+/** How many films a user has logged — used by the public user picker. */
+export async function countWatched(userId: string): Promise<number> {
+  const redis = getClient();
+  if (!redis) return memoryFor(userId).size;
+
+  try {
+    return await redis.scard(watchedKey(userId));
+  } catch (error) {
+    console.error("[kv] failed to count watched movies:", error);
+    return 0;
+  }
+}
+
+export async function setWatched(
+  userId: string,
+  movieId: string,
+  watched: boolean,
+): Promise<void> {
   const redis = getClient();
 
   if (!redis) {
-    if (watched) memoryStore.add(movieId);
-    else memoryStore.delete(movieId);
+    const store = memoryFor(userId);
+    if (watched) store.add(movieId);
+    else store.delete(movieId);
     return;
   }
 
-  if (watched) await redis.sadd(WATCHED_KEY, movieId);
-  else await redis.srem(WATCHED_KEY, movieId);
+  if (watched) await redis.sadd(watchedKey(userId), movieId);
+  else await redis.srem(watchedKey(userId), movieId);
 }
 
 /**
  * Batch equivalent of `setWatched`, for "mark whole phase / franchise watched".
  * One round trip instead of N — SADD and SREM are both variadic.
  */
-export async function setWatchedMany(movieIds: string[], watched: boolean): Promise<void> {
+export async function setWatchedMany(
+  userId: string,
+  movieIds: string[],
+  watched: boolean,
+): Promise<void> {
   if (movieIds.length === 0) return;
 
   const redis = getClient();
 
   if (!redis) {
+    const store = memoryFor(userId);
     for (const id of movieIds) {
-      if (watched) memoryStore.add(id);
-      else memoryStore.delete(id);
+      if (watched) store.add(id);
+      else store.delete(id);
     }
     return;
   }
@@ -81,6 +96,6 @@ export async function setWatchedMany(movieIds: string[], watched: boolean): Prom
   // Split the head off so TypeScript sees the non-empty tuple that sadd/srem
   // require; the early return above guarantees there is one.
   const [first, ...rest] = movieIds;
-  if (watched) await redis.sadd(WATCHED_KEY, first, ...rest);
-  else await redis.srem(WATCHED_KEY, first, ...rest);
+  if (watched) await redis.sadd(watchedKey(userId), first, ...rest);
+  else await redis.srem(watchedKey(userId), first, ...rest);
 }

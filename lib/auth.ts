@@ -1,25 +1,17 @@
 /**
- * Passcode wall.
+ * Session handling.
  *
- * A single owner-held passcode gates every read and write. The session cookie
- * stores a SHA-256 digest of the passcode rather than the passcode itself, so
- * the plaintext never leaves the server, and both comparisons run in constant
- * time.
+ * The cookie stores `<userId>.<token>`, where the token is derived from the
+ * user's stored PIN hash. The PIN itself never leaves the login form, and
+ * changing a PIN invalidates any existing session for free.
  */
-import { createHash, timingSafeEqual } from "node:crypto";
+import { timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
+
+import { getUser, tokenFor, type User } from "@/lib/users";
 
 const COOKIE_NAME = "mcu_session";
 const SESSION_DAYS = 180;
-
-/** Change this in Vercel → Settings → Environment Variables, or leave the default. */
-export function getPasscode(): string {
-  return process.env.APP_PASSCODE ?? "2099";
-}
-
-function digest(passcode: string): string {
-  return createHash("sha256").update(`mcu-archive::${passcode}`).digest("hex");
-}
 
 function constantTimeEquals(a: string, b: string): boolean {
   const bufA = Buffer.from(a, "utf8");
@@ -28,18 +20,25 @@ function constantTimeEquals(a: string, b: string): boolean {
   return timingSafeEqual(bufA, bufB);
 }
 
-export function isValidPasscode(input: string): boolean {
-  return constantTimeEquals(digest(input), digest(getPasscode()));
+/** The signed-in user, or null. Also returns null if the account has gone. */
+export async function getCurrentUser(): Promise<User | null> {
+  const raw = (await cookies()).get(COOKIE_NAME)?.value;
+  if (!raw) return null;
+
+  const separator = raw.lastIndexOf(".");
+  if (separator <= 0) return null;
+
+  const id = raw.slice(0, separator);
+  const token = raw.slice(separator + 1);
+
+  const expected = await tokenFor(id);
+  if (!expected || !constantTimeEquals(token, expected)) return null;
+
+  return getUser(id);
 }
 
-export async function isAuthenticated(): Promise<boolean> {
-  const token = (await cookies()).get(COOKIE_NAME)?.value;
-  if (!token) return false;
-  return constantTimeEquals(token, digest(getPasscode()));
-}
-
-export async function createSession(): Promise<void> {
-  (await cookies()).set(COOKIE_NAME, digest(getPasscode()), {
+export async function createSession(userId: string, token: string): Promise<void> {
+  (await cookies()).set(COOKIE_NAME, `${userId}.${token}`, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",

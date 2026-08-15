@@ -1,11 +1,8 @@
 # MCU Archive
 
-A private, passcode-gated tracker for every Marvel Cinematic Universe film — Phase One
-through Phase Six. Built with Next.js (App Router), TypeScript, Tailwind CSS, and Redis
-via Server Actions.
-
-A private, passcode-gated tracker for **79 Marvel films** across Marvel Studios, Fox, Sony,
-Universal, New Line and Lionsgate.
+A PIN-gated, multi-profile tracker for **79 Marvel films** across Marvel Studios, Fox,
+Sony, Universal, New Line and Lionsgate. Built with Next.js (App Router), TypeScript,
+Tailwind CSS, and Redis via Server Actions. Every profile keeps its own watch log.
 
 An interactive cinematic timeline with a multi-layer cosmic parallax backdrop, glassmorphic
 cards that tilt in 3D toward the cursor, per-franchise colour themes, character filtering,
@@ -43,21 +40,39 @@ on the next boot. The header badge flips from **LOCAL** to **SYNCED** once it's 
 
 ---
 
-## Access
+## Accounts
 
-The app is behind a single hardcoded passcode.
+Anyone can create a profile: a username and a **4-digit PIN**. Each profile keeps its own
+watch log under `user:<id>:watched_movies`, so several people can track the same catalog
+independently.
 
-| | |
-|---|---|
-| **Default passcode** | `2099` |
-| **How to change it** | Set `APP_PASSCODE` in Vercel → Settings → Environment Variables |
+The sign-in screen is a **public directory** — every username is listed with its completion
+count, and picking one asks for that profile's PIN. Switching profile is the avatar button
+in the top-right.
 
-The session is a `httpOnly`, `sameSite=lax` cookie holding a SHA-256 digest of the passcode
-(never the passcode itself), compared in constant time. It lasts 180 days. The lock button
-in the top-right clears it.
+The session is an `httpOnly`, `sameSite=lax` cookie holding `<userId>.<token>`, where the
+token is derived from the stored PIN hash — the PIN itself never leaves the login form, and
+changing a PIN invalidates existing sessions for free. It lasts 180 days. Every write
+re-checks the session server-side and scopes to that user, so a leaked Server Action
+endpoint can't be used to edit someone else's log.
 
-Every write also re-checks the session server-side, so a leaked Server Action endpoint
-can't be used to edit your log.
+> ### ⚠️ A 4-digit PIN is a soft lock, not real security
+>
+> Four digits is 10,000 combinations, and the usernames are public by design. That is fine
+> for stopping housemates ticking each other's films off; it is **not** protection for
+> anything sensitive. Don't reuse a PIN that guards something that matters.
+>
+> Two mitigations are in place:
+>
+> - PINs are hashed with **scrypt** and a per-user random salt, so a dump of the store
+>   can't be reversed with a lookup table.
+> - Failed logins are counted per user and locked out after **8 attempts in 10 minutes**,
+>   which makes online brute force impractical.
+>
+> If you later want this properly locked down, the upgrade is longer PINs or an OAuth
+> provider — the session layer in `lib/auth.ts` wouldn't have to change much.
+
+`APP_PASSCODE` is no longer used and can be deleted from your Vercel environment variables.
 
 ---
 
@@ -68,7 +83,7 @@ npm install
 npm run dev
 ```
 
-Then open <http://localhost:3000> and enter `2099`.
+Then open <http://localhost:3000> and create a profile.
 
 Without Redis credentials the app falls back to an **in-process store** so `npm run dev`
 and `npm run build` work with no setup at all. That fallback is not a database — it is
@@ -86,7 +101,6 @@ npx vercel env pull .env.local
 
 | Variable | Required | Purpose |
 |---|---|---|
-| `APP_PASSCODE` | No | Overrides the default `2099` passcode |
 | `UPSTASH_REDIS_REST_URL` | Auto | Injected by the Vercel Storage integration |
 | `UPSTASH_REDIS_REST_TOKEN` | Auto | Injected by the Vercel Storage integration |
 
@@ -96,12 +110,11 @@ See `.env.example`.
 
 ## How syncing works
 
-State lives in a **single Redis set**, `user:watched_movies`, holding the ids of watched
-films (`iron-man`, `avengers-endgame`, …).
+State lives in a **Redis set per profile**, `user:<userId>:watched_movies`, holding the ids of watched films (`iron-man`, `avengers-endgame`, …). Accounts live in a `users` hash.
 
 1. Clicking a card fires the `toggleWatchedAction` Server Action.
 2. It verifies the session, validates the id against the known slate, then `SADD`/`SREM`s
-   the id in Redis.
+   the id in that user's set.
 3. `revalidatePath("/")` invalidates the render, so any other device shows the change on
    its next load.
 4. Locally, `useOptimistic` flips the card immediately — the round trip never blocks the UI.
@@ -112,13 +125,14 @@ films (`iron-man`, `avengers-endgame`, …).
 
 ```
 app/
-  actions.ts        Server Actions — login, logout, toggle, batch toggle
-  page.tsx          Auth check → passcode gate or tracker
+  actions.ts        Server Actions — login, create user, logout, toggles
+  page.tsx          Session check → auth gate or tracker
   layout.tsx        Fonts, metadata, parallax backdrop mount
   globals.css       Tailwind v4 theme, glass + parallax utilities, keyframes
 components/
   parallax-backdrop.tsx  Multi-layer cosmic parallax (client)
-  passcode-gate.tsx      Passcode wall
+  auth-gate.tsx          Profile picker, PIN entry, account creation
+  pin-input.tsx          Four auto-advancing digit boxes
   tracker.tsx            Views, filters, URL sync, grouping, batch actions
   progress-header.tsx    View nav, progress meter, Infinity Roulette
   filter-bar.tsx         Search, status, studios, phases, sort, density
@@ -137,8 +151,10 @@ lib/
   universes.ts      Phase + franchise colour stories
   heroes.ts         Character roster for the filter pills
   posters.ts        Movie id → TMDB poster path
-  kv.ts             Redis access (with in-memory dev fallback)
-  auth.ts           Passcode hashing and session cookie
+  redis.ts          Shared Upstash client (with in-memory dev fallback)
+  kv.ts             Per-user watched sets
+  users.ts          Accounts, scrypt PIN hashing, login throttling
+  auth.ts           Session cookie
 ```
 
 ---

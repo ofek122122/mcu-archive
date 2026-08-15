@@ -28,6 +28,8 @@ import { StatsView } from "@/components/stats-view";
 type TrackerProps = {
   movies: TrackedMovie[];
   watched: string[];
+  /** Signed-in profile — each account keeps its own watch log. */
+  username: string;
   databaseConnected: boolean;
 };
 
@@ -41,7 +43,7 @@ const CATALOG_NUMBER = new Map(MOVIES.map((movie, index) => [movie.id, index + 1
 
 const HERO_IDS = new Set<string>(HEROES.map((hero) => hero.id));
 
-export function Tracker({ movies, watched, databaseConnected }: TrackerProps) {
+export function Tracker({ movies, watched, username, databaseConnected }: TrackerProps) {
   const searchParams = useSearchParams();
 
   const [view, setView] = useState<ViewId>(() => parseView(searchParams.get("view")));
@@ -239,6 +241,7 @@ export function Tracker({ movies, watched, databaseConnected }: TrackerProps) {
         <ProgressHeader
           view={view}
           onViewChange={setView}
+          username={username}
           watchedCount={view === "stats" ? scopedWatched : scopedWatched}
           total={scoped.length}
           perPhase={perPhase}
