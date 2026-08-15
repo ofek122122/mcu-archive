@@ -4,21 +4,17 @@
  * This file is the app's only "data source" — nothing is fetched at runtime.
  *
  * ── Poster artwork ─────────────────────────────────────────────────────────
- * `posterUrl` is optional. When it is absent the card renders generated key art
- * (a phase-themed gradient with the film's monogram in hollow display type).
- * To use real posters, set `posterUrl` to any absolute URL on an allow-listed
- * host (see `next.config.ts`) or a local file under `/public/posters/`:
- *
- *   posterUrl: "https://image.tmdb.org/t/p/w500/<path>.jpg"
- *   posterUrl: "/posters/iron-man.jpg"
- *
- * If the image 404s the card silently falls back to the generated art, so a bad
- * URL degrades instead of breaking the layout.
+ * Posters live in `lib/posters.ts`, keyed by movie id, and are attached by
+ * `withReleaseStatus()`. Setting `posterUrl` directly on a film here overrides
+ * that map. If an image fails to load the card falls back to generated key art
+ * (a phase-themed gradient with the film's monogram), so a bad URL degrades
+ * instead of breaking the layout.
  *
  * ── IMDb ratings ───────────────────────────────────────────────────────────
  * Ratings are a point-in-time snapshot and drift by a tenth or two over time.
  * `imdbRating` is null for films that have not screened yet.
  */
+import { posterFor } from "@/lib/posters";
 
 export type PhaseId = 1 | 2 | 3 | 4 | 5 | 6;
 
@@ -589,7 +585,7 @@ export const MOVIES: Movie[] = [
       "Three heroes swap places every time they use their powers, and have to learn to fight as one.",
     initials: "TM",
     imdbId: "tt10676048",
-    imdbRating: 5.6,
+    imdbRating: 5.5,
   },
   {
     id: "deadpool-and-wolverine",
@@ -615,7 +611,7 @@ export const MOVIES: Movie[] = [
     synopsis: "Sam Wilson's first mission as Captain America collides with a new President's agenda.",
     initials: "BNW",
     imdbId: "tt14513804",
-    imdbRating: 5.7,
+    imdbRating: 5.6,
   },
   {
     id: "thunderbolts",
@@ -628,7 +624,7 @@ export const MOVIES: Movie[] = [
     synopsis: "A group of disposable antiheroes is set up to die and decides not to oblige.",
     initials: "TB",
     imdbId: "tt20969586",
-    imdbRating: 7.2,
+    imdbRating: 7.1,
   },
 
   // ── Phase Six ──────────────────────────────────────────────────────────────
@@ -643,10 +639,10 @@ export const MOVIES: Movie[] = [
     synopsis: "A retro-futurist first family defends their Earth from a world-eater and his herald.",
     initials: "F4",
     imdbId: "tt10676052",
-    imdbRating: 7.1,
+    imdbRating: 6.8,
   },
   // The three films below had not screened at time of writing. Their IMDb ids
-  // are provisional listings and are worth re-checking before you rely on them.
+  // were verified against live IMDb listings.
   {
     id: "spider-man-brand-new-day",
     title: "Spider-Man: Brand New Day",
@@ -657,7 +653,7 @@ export const MOVIES: Movie[] = [
     runtime: null,
     synopsis: "A Peter Parker nobody remembers starts over from nothing in a changed New York.",
     initials: "BND",
-    imdbId: "tt11388926",
+    imdbId: "tt22084616",
     imdbRating: null,
   },
   {
@@ -670,7 +666,7 @@ export const MOVIES: Movie[] = [
     runtime: null,
     synopsis: "Heroes from across the multiverse are drawn together against Doctor Doom.",
     initials: "AD",
-    imdbId: "tt22801226",
+    imdbId: "tt21357150",
     imdbRating: null,
   },
   {
@@ -683,7 +679,7 @@ export const MOVIES: Movie[] = [
     runtime: null,
     synopsis: "The final incursion collapses the multiverse into one battleworld.",
     initials: "SW",
-    imdbId: "tt29657002",
+    imdbId: "tt21361444",
     imdbRating: null,
   },
 ];
@@ -702,13 +698,16 @@ export function imdbUrl(movie: Pick<Movie, "imdbId">): string {
 }
 
 /**
- * Stamp each film with whether it has screened yet. Called from the server on
- * every request so the client component never has to read the clock.
+ * Stamp each film with its poster and whether it has screened yet. Called from
+ * the server on every request so the client never has to read the clock.
+ *
+ * An explicit `posterUrl` on the film wins; otherwise the TMDB map is used.
  */
 export function withReleaseStatus(): TrackedMovie[] {
   const now = Date.now();
   return MOVIES.map((movie) => ({
     ...movie,
+    posterUrl: movie.posterUrl ?? posterFor(movie.id),
     upcoming: new Date(movie.releaseDate).getTime() > now,
   }));
 }
