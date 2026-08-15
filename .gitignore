@@ -39,3 +39,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local screenshots (root only — poster art in public/ is kept)
+.playwright-mcp/
+/*.png
+
+.vercel
+.env*
+# ...but the documented template carries no secrets and should be committed.
+!.env.example

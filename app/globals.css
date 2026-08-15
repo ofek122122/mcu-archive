@@ -1,26 +1,345 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  --font-display: var(--font-anton), Impact, "Arial Narrow", sans-serif;
+  --font-sans: var(--font-barlow), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, SFMono-Regular, monospace;
+
+  --color-void: #04040a;
+  --color-ink: #08080f;
+  --color-panel: #0e0e18;
+  --color-edge: #232333;
+  --color-mist: #8a8a9d;
+  --color-bone: #edebe6;
+  --color-marvel: #e23636;
+  --color-gold: #f5c518;
+  --color-arc: #5ad2f4;
+
+  --animate-rise: rise 0.6s cubic-bezier(0.2, 0.85, 0.25, 1) both;
+  --animate-shake: shake 0.42s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  --animate-pop: pop 0.34s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  --animate-twinkle: twinkle 6s ease-in-out infinite;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(22px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@keyframes shake {
+  10%,
+  90% {
+    transform: translateX(-2px);
+  }
+  20%,
+  80% {
+    transform: translateX(4px);
+  }
+  30%,
+  50%,
+  70% {
+    transform: translateX(-7px);
+  }
+  40%,
+  60% {
+    transform: translateX(7px);
+  }
+}
+
+@keyframes pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.4) rotate(-25deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Ambient drift for mid-ground dust and embers. */
+@keyframes float-drift {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0;
+  }
+  15% {
+    opacity: var(--ember-peak, 0.7);
+  }
+  85% {
+    opacity: var(--ember-peak, 0.7);
+  }
+  100% {
+    transform: translate3d(var(--ember-dx, 14px), -140px, 0) scale(1.35);
+    opacity: 0;
+  }
+}
+
+@keyframes rift-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes nebula-breathe {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.55;
+  }
+  50% {
+    transform: translate3d(2%, -3%, 0) scale(1.12);
+    opacity: 0.85;
+  }
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+    scroll-behavior: smooth;
+    /* Every parallax layer is fixed, so nothing here can push the page sideways. */
+    overflow-x: hidden;
+  }
+
+  body {
+    min-height: 100dvh;
+    background-color: var(--color-void);
+    color: var(--color-bone);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  ::selection {
+    background: var(--color-arc);
+    color: #04040a;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-arc);
+    outline-offset: 3px;
+  }
+}
+
+@layer utilities {
+  /* ── Parallax layers ──────────────────────────────────────────────────────
+     `--scroll` (px, unitless) and `--velocity` are written by ParallaxBackdrop
+     on a single rAF-throttled scroll listener. Layers only ever change
+     `transform`, so they stay on the compositor and never trigger layout. */
+  .plx-deep {
+    transform: translate3d(0, calc(var(--scroll, 0) * -0.035px), 0);
+    will-change: transform;
+  }
+
+  .plx-mid {
+    transform: translate3d(
+      0,
+      calc(var(--scroll, 0) * -0.11px + var(--velocity, 0) * -1.6px),
+      0
+    );
+    will-change: transform;
+  }
+
+  .plx-near {
+    transform: translate3d(
+      0,
+      calc(var(--scroll, 0) * -0.2px + var(--velocity, 0) * -2.6px),
+      0
+    );
+    will-change: transform;
+  }
+
+  /* Mobile GPUs get a much shallower parallax budget. */
+  @media (max-width: 768px) {
+    .plx-deep {
+      transform: translate3d(0, calc(var(--scroll, 0) * -0.015px), 0);
+    }
+    .plx-mid {
+      transform: translate3d(0, calc(var(--scroll, 0) * -0.045px), 0);
+    }
+    .plx-near {
+      transform: translate3d(0, calc(var(--scroll, 0) * -0.075px), 0);
+    }
+  }
+
+  /* ── Starfield ────────────────────────────────────────────────────────────
+     Tiling radial-gradients rather than hundreds of DOM nodes or box-shadows:
+     seamless at any scroll offset, one paint, zero hydration risk. */
+  .starfield-far {
+    background-image:
+      radial-gradient(1px 1px at 24px 38px, rgba(255, 255, 255, 0.85), transparent),
+      radial-gradient(1px 1px at 118px 92px, rgba(190, 225, 255, 0.7), transparent),
+      radial-gradient(1px 1px at 62px 168px, rgba(255, 255, 255, 0.6), transparent),
+      radial-gradient(1px 1px at 196px 44px, rgba(215, 200, 255, 0.65), transparent),
+      radial-gradient(1px 1px at 152px 214px, rgba(255, 255, 255, 0.5), transparent),
+      radial-gradient(1px 1px at 231px 148px, rgba(180, 230, 255, 0.55), transparent),
+      radial-gradient(1px 1px at 88px 258px, rgba(255, 255, 255, 0.45), transparent),
+      radial-gradient(1px 1px at 268px 226px, rgba(235, 215, 255, 0.5), transparent);
+    background-size: 300px 300px;
+  }
+
+  .starfield-mid {
+    background-image:
+      radial-gradient(1.5px 1.5px at 58px 76px, rgba(255, 255, 255, 0.95), transparent),
+      radial-gradient(1.5px 1.5px at 244px 132px, rgba(160, 215, 255, 0.8), transparent),
+      radial-gradient(1.5px 1.5px at 136px 296px, rgba(255, 245, 220, 0.75), transparent),
+      radial-gradient(1.5px 1.5px at 348px 208px, rgba(210, 190, 255, 0.7), transparent),
+      radial-gradient(1.5px 1.5px at 30px 342px, rgba(255, 255, 255, 0.65), transparent),
+      radial-gradient(1.5px 1.5px at 300px 372px, rgba(180, 235, 255, 0.6), transparent);
+    background-size: 420px 420px;
+  }
+
+  .starfield-near {
+    background-image:
+      radial-gradient(2px 2px at 92px 118px, rgba(255, 255, 255, 1), transparent),
+      radial-gradient(2px 2px at 430px 268px, rgba(140, 210, 255, 0.9), transparent),
+      radial-gradient(2px 2px at 236px 486px, rgba(255, 230, 190, 0.85), transparent),
+      radial-gradient(2px 2px at 552px 88px, rgba(220, 190, 255, 0.8), transparent);
+    background-size: 640px 640px;
+  }
+
+  /* ── Glassmorphism ────────────────────────────────────────────────────────
+     `.glass` is the surface; `.glass-edge` paints a 1px gradient hairline via a
+     masked pseudo-element, tinted per phase through --edge-from / --edge-to. */
+  .glass {
+    background-color: color-mix(in oklab, var(--color-panel) 62%, transparent);
+    backdrop-filter: blur(14px) saturate(150%);
+    -webkit-backdrop-filter: blur(14px) saturate(150%);
+  }
+
+  .glass-strong {
+    background-color: color-mix(in oklab, var(--color-panel) 82%, transparent);
+    backdrop-filter: blur(22px) saturate(160%);
+    -webkit-backdrop-filter: blur(22px) saturate(160%);
+  }
+
+  .glass-edge {
+    position: relative;
+  }
+
+  .glass-edge::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      140deg,
+      var(--edge-from, rgba(255, 255, 255, 0.28)) 0%,
+      rgba(255, 255, 255, 0.04) 42%,
+      var(--edge-to, rgba(255, 255, 255, 0.14)) 100%
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* ── 3D tilt ──────────────────────────────────────────────────────────────
+     --rx/--ry are written by the card's pointer handler (fine pointers only). */
+  .tilt {
+    transform: perspective(1000px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg))
+      translate3d(0, var(--lift, 0px), 0);
+    transform-style: preserve-3d;
+    transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  .tilt-active {
+    transition-duration: 0.08s;
+  }
+
+  /* Cursor-tracking specular highlight. */
+  .sheen::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(
+      380px circle at var(--mx, 50%) var(--my, 50%),
+      rgba(255, 255, 255, 0.13),
+      transparent 42%
+    );
+    opacity: 0;
+    transition: opacity 0.35s ease;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  .group:hover .sheen::after {
+    opacity: 1;
+  }
+
+  /* Hairline scanlines laid over the generated poster tiles. */
+  .scanlines {
+    background-image: repeating-linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0.4) 0px,
+      rgba(0, 0, 0, 0.4) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+  }
+
+  /* Hollow display type. Pair with an inline `WebkitTextStrokeColor`. */
+  .outlined {
+    color: transparent;
+    -webkit-text-stroke-width: 1.5px;
+  }
+
+  .tracking-brand {
+    letter-spacing: 0.18em;
+  }
+
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Kill parallax, tilt and drift entirely for motion-sensitive users. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+
+  .plx-deep,
+  .plx-mid,
+  .plx-near,
+  .tilt {
+    transform: none !important;
+  }
 }
