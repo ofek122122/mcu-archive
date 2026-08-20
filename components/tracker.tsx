@@ -11,6 +11,7 @@ import { PHASES } from "@/lib/universes";
 import type { HeroId, PhaseId, Theme, TrackedMovie, UniverseId } from "@/lib/types";
 import {
   FilterBar,
+  type KindFilter,
   type PhaseFilter,
   type SortKey,
   type StatusFilter,
@@ -56,6 +57,7 @@ export function Tracker({ movies, watched, username, databaseConnected }: Tracke
   const [universes, setUniverses] = useState<UniverseId[]>(() =>
     parseUniverses(searchParams.get("studios")),
   );
+  const [kind, setKind] = useState<KindFilter>(() => parseKind(searchParams.get("kind")));
   const [order, setOrder] = useState<TimelineOrder>(() => parseOrder(searchParams.get("order")));
   const [sort, setSort] = useState<SortKey>(() => parseSort(searchParams.get("sort")));
   const [mode, setMode] = useState<ViewMode>(() => parseMode(searchParams.get("mode")));
@@ -89,6 +91,7 @@ export function Tracker({ movies, watched, username, databaseConnected }: Tracke
     if (hero) params.set("hero", hero);
     if (query.trim()) params.set("q", query.trim());
     if (status !== "all") params.set("status", status);
+    if (kind !== "all") params.set("kind", kind);
     if (phaseFilter !== "all") params.set("phase", String(phaseFilter));
     if (universes.length > 0) params.set("studios", universes.join(","));
     if (order !== "release") params.set("order", order);
@@ -97,13 +100,19 @@ export function Tracker({ movies, watched, username, databaseConnected }: Tracke
 
     const search = params.toString();
     window.history.replaceState(null, "", search ? `${window.location.pathname}?${search}` : window.location.pathname);
-  }, [view, hero, query, status, phaseFilter, universes, order, sort, mode]);
+  }, [view, hero, query, status, kind, phaseFilter, universes, order, sort, mode]);
 
   // ── Filtering ─────────────────────────────────────────────────────────────
-  const scoped = useMemo(
-    () => (view === "mcu" ? movies.filter((movie) => movie.universe === "mcu") : movies),
-    [movies, view],
-  );
+  // The kind filter folds into the scope rather than the visible list, so
+  // excluding series also removes them from the progress meter, the stats
+  // dashboard and the roulette pool — "hide series" means hide them entirely.
+  const scoped = useMemo(() => {
+    let list = view === "mcu" ? movies.filter((movie) => movie.universe === "mcu") : movies;
+    if (kind !== "all") {
+      list = list.filter((movie) => (movie.kind === "series" ? "series" : "movie") === kind);
+    }
+    return list;
+  }, [movies, view, kind]);
 
   const heroCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -189,13 +198,13 @@ export function Tracker({ movies, watched, username, databaseConnected }: Tracke
   const perPhase = useMemo(() => {
     const totals: Record<number, { watched: number; total: number }> = {};
     for (const phase of PHASES) totals[phase.id] = { watched: 0, total: 0 };
-    for (const movie of movies) {
+    for (const movie of scoped) {
       if (!movie.phase) continue;
       totals[movie.phase].total += 1;
       if (watchedSet.has(movie.id)) totals[movie.phase].watched += 1;
     }
     return totals;
-  }, [movies, watchedSet]);
+  }, [scoped, watchedSet]);
 
   const scopedWatched = useMemo(
     () => scoped.filter((movie) => watchedSet.has(movie.id)).length,
@@ -242,7 +251,7 @@ export function Tracker({ movies, watched, username, databaseConnected }: Tracke
           view={view}
           onViewChange={setView}
           username={username}
-          watchedCount={view === "stats" ? scopedWatched : scopedWatched}
+          watchedCount={scopedWatched}
           total={scoped.length}
           perPhase={perPhase}
           databaseConnected={databaseConnected}
@@ -254,6 +263,8 @@ export function Tracker({ movies, watched, username, databaseConnected }: Tracke
           <>
             <FilterBar
               isMcuView={view === "mcu"}
+              kind={kind}
+              onKindChange={setKind}
               query={query}
               onQueryChange={setQuery}
               status={status}
@@ -281,7 +292,7 @@ export function Tracker({ movies, watched, username, databaseConnected }: Tracke
 
       <main className="relative mx-auto max-w-[1500px] px-4 pt-8 pb-28 sm:px-6">
         {view === "stats" ? (
-          <StatsView movies={movies} watchedSet={watchedSet} />
+          <StatsView movies={scoped} watchedSet={watchedSet} />
         ) : visible.length === 0 ? (
           <EmptyState />
         ) : mode === "compact" ? (
@@ -607,6 +618,10 @@ function parseUniverses(value: string | null): UniverseId[] {
   if (!value) return [];
   const allowed: UniverseId[] = ["mcu", "fox", "sony", "legacy"];
   return value.split(",").filter((id): id is UniverseId => allowed.includes(id as UniverseId));
+}
+
+function parseKind(value: string | null): KindFilter {
+  return value === "movie" || value === "series" ? value : "all";
 }
 
 function parseOrder(value: string | null): TimelineOrder {

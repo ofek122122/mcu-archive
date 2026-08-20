@@ -1,7 +1,7 @@
 "use client";
 
 import { type CSSProperties } from "react";
-import { Clock, Film, Lock, Sparkles, Trophy } from "lucide-react";
+import { Clock, Film, Lock, Sparkles, Trophy, Tv } from "lucide-react";
 
 import { PHASES, UNIVERSES } from "@/lib/universes";
 import type { TrackedMovie } from "@/lib/types";
@@ -29,13 +29,20 @@ export function StatsView({ movies, watchedSet }: StatsViewProps) {
   const totalMinutes = movies.reduce((sum, movie) => sum + (movie.runtime ?? 0), 0);
   const remainingHours = (totalMinutes - minutes) / 60;
 
+  const films = movies.filter((movie) => movie.kind !== "series");
+  const series = movies.filter((movie) => movie.kind === "series");
+  const filmsWatched = films.filter((movie) => watchedSet.has(movie.id)).length;
+  const seriesWatched = series.filter((movie) => watchedSet.has(movie.id)).length;
+
   const rated = watched.filter((movie) => movie.imdbRating !== null);
   const averageRating =
     rated.length === 0
       ? null
       : rated.reduce((sum, movie) => sum + (movie.imdbRating ?? 0), 0) / rated.length;
 
-  const universeRows = UNIVERSES.map((universe) => {
+  const universeRows = UNIVERSES.filter((universe) =>
+    movies.some((movie) => movie.universe === universe.id),
+  ).map((universe) => {
     const inUniverse = movies.filter((movie) => movie.universe === universe.id);
     const seen = inUniverse.filter((movie) => watchedSet.has(movie.id));
     return {
@@ -46,7 +53,9 @@ export function StatsView({ movies, watchedSet }: StatsViewProps) {
     };
   });
 
-  const phaseRows = PHASES.map((phase) => {
+  const phaseRows = PHASES.filter((phase) =>
+    movies.some((movie) => movie.phase === phase.id),
+  ).map((phase) => {
     const inPhase = movies.filter((movie) => movie.phase === phase.id);
     const seen = inPhase.filter((movie) => watchedSet.has(movie.id));
     return {
@@ -60,10 +69,10 @@ export function StatsView({ movies, watchedSet }: StatsViewProps) {
   return (
     <div className="space-y-5">
       {/* ── Headline tiles ────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <Tile
           icon={Film}
-          label="Films logged"
+          label="Titles logged"
           value={`${watched.length}`}
           sub={`of ${movies.length} · ${percent.toFixed(0)}%`}
           accent="#5ad2f4"
@@ -81,6 +90,17 @@ export function StatsView({ movies, watchedSet }: StatsViewProps) {
           value={averageRating === null ? "—" : averageRating.toFixed(2)}
           sub={rated.length === 0 ? "Nothing rated yet" : `across ${rated.length} rated films`}
           accent="#f5c518"
+        />
+        <Tile
+          icon={Tv}
+          label="Films / series"
+          value={`${filmsWatched}/${films.length}`}
+          sub={
+            series.length === 0
+              ? "No series in this filter"
+              : `${seriesWatched}/${series.length} series logged`
+          }
+          accent="#22c55e"
         />
         <Tile
           icon={Trophy}

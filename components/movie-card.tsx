@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
-import { Check, Clock3, ExternalLink, Info, Plus } from "lucide-react";
+import { Check, Clock3, ExternalLink, Info, Plus, Tv } from "lucide-react";
 
 import { imdbUrl } from "@/lib/movies";
 import type { Theme, TrackedMovie } from "@/lib/types";
@@ -73,6 +73,16 @@ export function MovieCard({
   }, []);
 
   const showArt = Boolean(movie.posterUrl) && !artFailed;
+  const isSeries = movie.kind === "series";
+  // Series show shape (seasons/episodes) rather than a single runtime; the
+  // total minutes are still in the modal and drive the watch-time stats.
+  const meta = isSeries
+    ? movie.seasons && movie.seasons > 1
+      ? `${movie.seasons} seasons · ${movie.episodes} eps`
+      : `${movie.episodes} ${movie.episodes === 1 ? "special" : "episodes"}`
+    : movie.runtime
+      ? `${movie.runtime}m`
+      : "TBA";
 
   return (
     <article
@@ -149,7 +159,8 @@ export function MovieCard({
           {/* Bottom scrim so the caption edge never fights the art */}
           <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-24 bg-gradient-to-t from-void/90 to-transparent" />
 
-          <span className="pointer-events-none absolute top-2 left-2 z-20 rounded-[3px] bg-void/70 px-1.5 py-0.5 font-mono text-[10px] font-medium text-bone/85 backdrop-blur-sm">
+          <span className="pointer-events-none absolute top-2 left-2 z-20 flex items-center gap-1 rounded-[3px] bg-void/70 px-1.5 py-0.5 font-mono text-[10px] font-medium text-bone/85 backdrop-blur-sm">
+            {isSeries ? <Tv className="size-2.5" style={{ color: theme.accent }} /> : null}
             {String(order).padStart(2, "0")}
           </span>
 
@@ -228,7 +239,7 @@ export function MovieCard({
             <p className="mt-1.5 flex items-center gap-1.5 font-mono text-[10px] text-mist">
               <span>{movie.year}</span>
               <span className="text-mist/50">/</span>
-              <span>{movie.runtime ? `${movie.runtime}m` : "TBA"}</span>
+              <span className="truncate">{meta}</span>
             </p>
           </div>
 

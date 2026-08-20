@@ -3,7 +3,10 @@
 export type PhaseId = 1 | 2 | 3 | 4 | 5 | 6;
 
 /** Top-level rights-holder grouping, used by the studio multi-select. */
-export type UniverseId = "mcu" | "fox" | "sony" | "legacy";
+export type UniverseId = "mcu" | "fox" | "sony" | "legacy" | "tv";
+
+/** Films vs. television. Entries with no `kind` are films. */
+export type TitleKind = "movie" | "series";
 
 /** Heroes that get a quick-select pill in the filter bar. */
 export type HeroId =
@@ -27,12 +30,18 @@ export type CharacterTag = HeroId | "punisher" | "black-panther" | "ant-man" | "
 export type Movie = {
   /** Stable slug — this is what gets written into the Redis set. */
   id: string;
+  /** Omitted means "movie", so the 79 film entries need no extra field. */
+  kind?: TitleKind;
   title: string;
   year: number;
   /** ISO release date (US theatrical). */
   releaseDate: string;
   director: string;
-  /** Minutes. `null` for films that have not screened yet. */
+  /**
+   * Minutes. For a series this is the **total** across every episode, so watch
+   * time and the runtime sort work the same for both kinds. `null` when the
+   * title has not been released yet.
+   */
   runtime: number | null;
   /** Short one-line premise. */
   synopsis: string;
@@ -53,6 +62,11 @@ export type Movie = {
   phase?: PhaseId;
   /** MCU only: 1-based position in in-universe chronological order. */
   chronoOrder?: number;
+
+  /** Series only: number of seasons released. */
+  seasons?: number;
+  /** Series only: total episode count across all seasons. */
+  episodes?: number;
 
   characters: CharacterTag[];
   villains: string[];

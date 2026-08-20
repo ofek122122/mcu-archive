@@ -1,7 +1,8 @@
 # MCU Archive
 
-A PIN-gated, multi-profile tracker for **79 Marvel films** across Marvel Studios, Fox,
-Sony, Universal, New Line and Lionsgate. Built with Next.js (App Router), TypeScript,
+A PIN-gated, multi-profile tracker for **110 Marvel titles** — 79 films and 31 series —
+across Marvel Studios, Fox, Sony, Universal, New Line, Lionsgate, ABC, Netflix, Hulu and
+Freeform. Built with Next.js (App Router), TypeScript,
 Tailwind CSS, and Redis via Server Actions. Every profile keeps its own watch log.
 
 An interactive cinematic timeline with a multi-layer cosmic parallax backdrop, glassmorphic
@@ -145,8 +146,11 @@ components/
   imdb-badge.tsx         IMDb wordmark + star rating chip
 lib/
   types.ts          Shared domain types
-  catalog-mcu.ts    Marvel Studios, Phase One → Six (40 films)
-  catalog-marvel.ts Fox / Sony / Universal / New Line / Lionsgate (39 films)
+  catalog-mcu.ts    Marvel Studios films, Phase One → Six (40)
+  catalog-series.ts Marvel Studios series and specials, Disney+ (20)
+  catalog-marvel.ts Fox / Sony / Universal / New Line / Lionsgate films (39)
+  catalog-tv.ts     Marvel Television — ABC / Netflix / Hulu / Freeform (11)
+  chronology.ts     Canonical MCU in-universe order
   movies.ts         Merges the catalogs, exposes helpers
   universes.ts      Phase + franchise colour stories
   heroes.ts         Character roster for the filter pills
@@ -161,17 +165,41 @@ lib/
 
 ## Views and filtering
 
-**79 films** across Marvel Studios, 20th Century Fox, Sony, Universal, New Line and
-Lionsgate.
+**110 titles** — 79 films and 31 series — across Marvel Studios, 20th Century Fox, Sony,
+Universal, New Line, Lionsgate, ABC, Netflix, Hulu and Freeform.
 
 | View | What it shows |
 |---|---|
 | **All Marvel** | The whole catalog, grouped into franchise chapters |
-| **MCU Timeline** | Marvel Studios only, with a **Release order / Story order** toggle |
+| **MCU Timeline** | Marvel Studios only — films *and* Disney+ series — with a **Release order / Story order** toggle |
 | **Stats & Vault** | Watch time, per-universe completion, achievement badges |
 
-"Story order" sorts by in-universe chronology (`chronoOrder`) rather than release date —
-*The First Avenger* → *Captain Marvel* → *Iron Man* → …
+"Story order" sorts by in-universe chronology rather than release date, with films and
+series interleaved — *Eyes of Wakanda* → *The First Avenger* → *Captain Marvel* → *Iron Man*
+→ … The ordering is a single list in `lib/chronology.ts` and is stamped onto each title at
+load, so there is one place to reorder. Placement past *Endgame* is genuinely contested —
+series span months of story time and several overlap — so that file follows Marvel's own
+published timeline where one exists and makes a judgement call where it does not.
+
+### Films and series
+
+Series are modelled one entry per *show*, not per season: Loki covers both seasons,
+What If...? all three. `runtime` holds the **total** minutes across every episode, so watch
+time, the runtime sort and progress counts treat both kinds identically. Cards show
+"2 seasons · 12 eps" where a film shows its runtime; the modal gives the hour total.
+
+A three-way **Everything / Movies / Series** toggle sits in the filter bar. It is deliberately
+scoped rather than cosmetic: choosing **Movies** removes series from the progress meter, the
+stats dashboard and the roulette pool as well as the grid — the MCU Timeline drops from
+60 titles back to the original 40 films. It is linkable as `?kind=movie`.
+
+**Where the series live.** Marvel Studios' Disney+ series carry a `phase` and sit in the MCU
+universe alongside the films. The older Marvel Television shows — the ABC, Netflix, Hulu and
+Freeform ones — get their own `tv` universe instead. Their canonicity is genuinely contested:
+the ABC shows referenced the films constantly and were never acknowledged back, while the
+Netflix ones were later pulled in explicitly, with Charlie Cox and Vincent D'Onofrio carried
+straight into *She-Hulk*, *Echo* and *Born Again*. Rather than rule on it, they are visible in
+All Marvel, excluded from the MCU Timeline, and filterable on their own.
 
 **Filtering** stacks: a character pill, a text search across titles / heroes / villains /
 directors / studios, a studio multi-select, watched status, and six sort orders. Chapters

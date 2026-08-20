@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ExternalLink, Info, Star } from "lucide-react";
+import { Check, ExternalLink, Info, Star, Tv } from "lucide-react";
 
 import { imdbUrl, themeFor } from "@/lib/movies";
 import type { TrackedMovie } from "@/lib/types";
@@ -74,9 +74,16 @@ export function CompactList({
                   >
                     {movie.title}
                   </span>
-                  <span className="mt-0.5 block truncate font-mono text-[10px] text-mist/70">
+                  <span className="mt-0.5 flex items-center gap-1 truncate font-mono text-[10px] text-mist/70">
+                    {movie.kind === "series" ? (
+                      <Tv className="size-2.5 shrink-0" style={{ color: theme.accent }} />
+                    ) : null}
                     {movie.year} · {movie.studio}
-                    {movie.runtime ? ` · ${movie.runtime}m` : " · TBA"}
+                    {movie.kind === "series"
+                      ? ` · ${movie.seasons}×${movie.episodes} eps`
+                      : movie.runtime
+                        ? ` · ${movie.runtime}m`
+                        : " · TBA"}
                   </span>
                 </span>
 

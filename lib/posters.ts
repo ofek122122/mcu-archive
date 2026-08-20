@@ -131,6 +131,41 @@ export const POSTER_PATHS: Readonly<Record<string, string>> = {
   "hulk-2003": "/UllIft2jLSBaay3zQyMV4GNdfy.jpg",
   "the-punisher-2004": "/7rmA1HwYp2GKM85BL0cVwCaosGr.jpg",
   "punisher-war-zone": "/oOvKJgYUIpfswGHAdW6159bPbvM.jpg",
+
+  // ── Marvel Studios series & specials (Disney+) ───────────────────────────
+  wandavision: "/ijWWwINc8h71NQ8j1LTJMFSj5wr.jpg",
+  "the-falcon-and-the-winter-soldier": "/6kbAMLteGO8yyewYau6bJ683sw7.jpg",
+  loki: "/kEl2t3OhXc3Zb9FBh1AuYzRTgZp.jpg",
+  "what-if": "/zaqfFDUrSfIljdD0OBxSjcutX8n.jpg",
+  hawkeye: "/ct5pNE5dDHryHLDnxyZPYcqO1sz.jpg",
+  "moon-knight": "/x6FsYvt33846IQnDSFxla9j0RX8.jpg",
+  "ms-marvel": "/3HWWh92kZbD7odwJX7nKmXNZsYo.jpg",
+  "i-am-groot": "/3QfQYECgu6DX5UUWCBvv1Fl0BAJ.jpg",
+  "she-hulk-attorney-at-law": "/5xz2orV8f0usyrfGNshcoXHmiaV.jpg",
+  "werewolf-by-night": "/mvIvNKRIJPPS7WSFarFhOAGIVnU.jpg",
+  "guardians-of-the-galaxy-holiday-special": "/8dqXyslZ2hv49Oiob9UjlGSHSTR.jpg",
+  "secret-invasion": "/3rINdUPSy9AklJg74jWHOyUXuZd.jpg",
+  echo: "/vFyJH630cF68LohVYjQW49074Sy.jpg",
+  "agatha-all-along": "/mGsxKwXUjojitRv2E9qMTbxbBRd.jpg",
+  "your-friendly-neighborhood-spider-man": "/kjcsNeqF52YUQ2rUBGLMHwLkxvR.jpg",
+  "daredevil-born-again": "/xDUoAsU8lQHOOoRkFiBuarmACDN.jpg",
+  ironheart: "/dOh6MJpdlQhYpLBhzhNQeYGKTZ5.jpg",
+  "eyes-of-wakanda": "/yuOfb1MgnaGPa4guzV0n1IFYVGN.jpg",
+  "marvel-zombies": "/mwKj9ERGFXsWot0nXgQ5yMQf9I7.jpg",
+  "wonder-man": "/6yy9nQlFt2l6UVWzrfhszFCaZ5C.jpg",
+
+  // ── Marvel Television (ABC / Netflix / Hulu / Freeform) ──────────────────
+  "agents-of-shield": "/gHUCCMy1vvj58tzE3dZqeC9SXus.jpg",
+  "agent-carter": "/fe79VYyLp5ZBstpJ4oukpuUT3B.jpg",
+  "daredevil-netflix": "/QWbPaDxiB6LW2LjASknzYBvjMj.jpg",
+  "jessica-jones": "/oxnWofiE9fHOgUfs9NJa6nG6NTR.jpg",
+  "luke-cage": "/yzM1hMB3PUJqbISX0f421b3xOjB.jpg",
+  "iron-fist": "/4l6KD9HhtD6nCDEfg10Lp6C6zah.jpg",
+  "the-defenders": "/49XzINhH4LFsgz7cx6TOPcHUJUL.jpg",
+  inhumans: "/zKfGip55oJ9tdzhyd9ayGyFFhuo.jpg",
+  "the-punisher": "/tM6xqRKXoloH9UchaJEyyRE9O1w.jpg",
+  runaways: "/hnHEhbzh0F7kN3Ah1lzRjtQuW16.jpg",
+  "cloak-and-dagger": "/pYnRJuBPEqZO1o4fcxBTgmKNHfy.jpg",
 };
 
 /** Absolute poster URL for a film, or undefined to fall back to generated art. */

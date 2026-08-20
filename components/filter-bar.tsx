@@ -1,11 +1,13 @@
 "use client";
 
-import { ArrowDownUp, Eye, EyeOff, LayoutGrid, Layers, List, Search, X } from "lucide-react";
+import { ArrowDownUp, Clapperboard, Eye, EyeOff, LayoutGrid, Layers, List, Search, Tv, X } from "lucide-react";
 
 import { PHASES, UNIVERSES } from "@/lib/universes";
 import type { PhaseId, UniverseId } from "@/lib/types";
 
 export type StatusFilter = "all" | "watched" | "unwatched";
+/** Films, series, or both. Excluding series removes them from counts too. */
+export type KindFilter = "all" | "movie" | "series";
 export type PhaseFilter = PhaseId | "all";
 export type ViewMode = "posters" | "compact";
 export type TimelineOrder = "release" | "chrono";
@@ -32,8 +34,16 @@ const STATUS_OPTIONS: { value: StatusFilter; label: string; icon: typeof Eye }[]
   { value: "unwatched", label: "Unwatched", icon: EyeOff },
 ];
 
+const KIND_OPTIONS: { value: KindFilter; label: string; icon: typeof Eye }[] = [
+  { value: "all", label: "Everything", icon: Layers },
+  { value: "movie", label: "Movies", icon: Clapperboard },
+  { value: "series", label: "Series", icon: Tv },
+];
+
 type FilterBarProps = {
   isMcuView: boolean;
+  kind: KindFilter;
+  onKindChange: (kind: KindFilter) => void;
   query: string;
   onQueryChange: (query: string) => void;
   status: StatusFilter;
@@ -53,6 +63,8 @@ type FilterBarProps = {
 
 export function FilterBar({
   isMcuView,
+  kind,
+  onKindChange,
   query,
   onQueryChange,
   status,
@@ -100,6 +112,33 @@ export function FilterBar({
                 <X className="size-3.5" />
               </button>
             ) : null}
+          </div>
+
+          {/* Films vs series — excluding one drops it from progress counts too */}
+          <div
+            role="group"
+            aria-label="Filter by type"
+            className="flex items-center gap-0.5 rounded-lg border border-white/10 bg-void/50 p-0.5 backdrop-blur-md"
+          >
+            {KIND_OPTIONS.map((option) => {
+              const Icon = option.icon;
+              const active = kind === option.value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  aria-pressed={active}
+                  title={option.label}
+                  onClick={() => onKindChange(option.value)}
+                  className={`flex cursor-pointer items-center gap-1.5 rounded-md px-2.5 py-1.5 font-mono text-[10px] tracking-brand uppercase transition-colors ${
+                    active ? "bg-arc text-void" : "text-mist hover:text-bone"
+                  }`}
+                >
+                  <Icon className="size-3" />
+                  <span className="hidden lg:inline">{option.label}</span>
+                </button>
+              );
+            })}
           </div>
 
           <div

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { Calendar, Check, Clapperboard, Clock3, ExternalLink, Plus, X } from "lucide-react";
+import { Calendar, Check, Clapperboard, Clock3, ExternalLink, Plus, Tv, X } from "lucide-react";
 
 import { imdbUrl } from "@/lib/movies";
 import type { Theme, TrackedMovie } from "@/lib/types";
@@ -44,6 +44,7 @@ export function MovieModal({ movie, theme, watched, onToggle, onClose }: MovieMo
   }, [onClose]);
 
   const showArt = Boolean(movie.posterUrl) && !artFailed;
+  const isSeries = movie.kind === "series";
 
   return (
     <div
@@ -142,16 +143,33 @@ export function MovieModal({ movie, theme, watched, onToggle, onClose }: MovieMo
             <p className="mt-4 text-sm leading-relaxed text-mist">{movie.synopsis}</p>
 
             <dl className="mt-5 grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
-              <Fact icon={Clapperboard} label="Director" value={movie.director} />
               <Fact
-                icon={Calendar}
-                label="Released"
-                value={DATE_FORMAT.format(new Date(movie.releaseDate))}
+                icon={Clapperboard}
+                label={isSeries ? "Created by" : "Director"}
+                value={movie.director}
               />
               <Fact
+                icon={Calendar}
+                label={isSeries ? "First aired" : "Released"}
+                value={DATE_FORMAT.format(new Date(movie.releaseDate))}
+              />
+              {isSeries ? (
+                <Fact
+                  icon={Tv}
+                  label="Episodes"
+                  value={`${movie.seasons} ${movie.seasons === 1 ? "season" : "seasons"} · ${movie.episodes} ${movie.episodes === 1 ? "episode" : "episodes"}`}
+                />
+              ) : null}
+              <Fact
                 icon={Clock3}
-                label="Runtime"
-                value={movie.runtime ? `${movie.runtime} min` : "To be announced"}
+                label={isSeries ? "Total runtime" : "Runtime"}
+                value={
+                  movie.runtime
+                    ? isSeries
+                      ? `about ${Math.round(movie.runtime / 60)} h (${movie.runtime} min)`
+                      : `${movie.runtime} min`
+                    : "To be announced"
+                }
               />
             </dl>
 
