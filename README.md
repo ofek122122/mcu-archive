@@ -134,6 +134,7 @@ npx vercel env pull .env.local
 | `UPSTASH_REDIS_REST_TOKEN` | Auto | Injected by the Vercel Storage integration |
 | `CLERK_SECRET_KEY` | Auto | Injected by the Clerk Marketplace integration |
 | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Auto | Injected by the Clerk Marketplace integration |
+| `ADMIN_EMAILS` | No | Comma-separated allowlist that bootstraps the first admin |
 
 See `.env.example`.
 
@@ -157,6 +158,7 @@ State lives in a **Redis set per profile**, `user:<userId>:watched_movies`, hold
 ```
 app/
   actions.ts        Server Actions — toggles, guest merge, legacy claim
+  admin/            Admin panel route + its Server Actions
   page.tsx          Loads the catalog for a guest or a signed-in account
   layout.tsx        Fonts, metadata, parallax backdrop mount
   globals.css       Tailwind v4 theme, glass + parallax utilities, keyframes
@@ -174,6 +176,9 @@ components/
   movie-modal.tsx        Full metadata panel
   roulette-modal.tsx     "What to watch next" cinematic reveal
   stats-view.tsx         Dashboard + Infinity Vault achievements
+  admin/admin-panel.tsx  Admin panel — six tabs
+  admin/charts.tsx       Chart primitives (bars, stat tiles)
+  admin/confirm-dialog.tsx  Type-to-confirm guard
   imdb-badge.tsx         IMDb wordmark + star rating chip
 lib/
   types.ts          Shared domain types
@@ -191,8 +196,81 @@ lib/
   guest-store.ts    Browser-held guest list (useSyncExternalStore source)
   legacy-users.ts   Pre-Clerk PIN profiles, kept for migration only
   auth.ts           Clerk session helpers
+  admin.ts          Admin access checks
+  admin-data.ts     Dashboard read models
+  activity.ts       Capped activity log + daily counters
+  audit.ts          Admin audit trail
 proxy.ts            Clerk middleware (Next 16 calls this Proxy)
 ```
+
+---
+
+## Admin panel
+
+`/admin` — hidden entirely from everyone else: a non-admin gets a **404**, not a 403, so
+the route's existence isn't advertised. Every Server Action behind it re-checks with
+`requireAdmin()`, because the panel being invisible is presentation, not a control.
+
+### Becoming an admin
+
+Two ways in, deliberately:
+
+| Route | Set by | Revocable in-app |
+|---|---|---|
+| `ADMIN_EMAILS` allowlist | env var | No — shown as "Admin · env" |
+| `publicMetadata.role = "admin"` | an existing admin, from the panel | Yes |
+
+The allowlist bootstraps the first admin, since before anyone is one there's nobody who can
+promote anyone. It's matched against Clerk's **verified primary email only**, so adding an
+unverified address to an account can't escalate it.
+
+### What's in it
+
+| Tab | Contents |
+|---|---|
+| **Overview** | Accounts, signups this week, active today/7d, total ticks, combined watch time, never-watched count · ticks-per-day chart · most-watched titles · completion leaderboard · per-universe totals · live activity feed |
+| **Users** | Every account with completion, join date and last seen. Expand a row to see and edit exactly what they've ticked. Promote/demote, block sign-in, reset list, delete account |
+| **Titles** | All 110 titles ranked by how many accounts ticked them, most or least first, searchable |
+| **Catalog** | Health checks — missing posters, unrated titles, unreleased, duplicate IMDb ids, and orphaned watch lists whose owner no longer exists (with one-click cleanup) |
+| **Data** | JSON backup download · additive restore · legacy PIN profile management · danger zone |
+| **Audit** | Every admin write, newest first |
+
+Tabs are deep-linkable: `?tab=users`.
+
+### Safety rails
+
+- **Destructive actions type-to-confirm.** Deleting an account requires typing its email,
+  and the typed value is re-checked on the server — the dialog makes the mistake harder,
+  it isn't what prevents it.
+- **The audit entry is written *before* the action runs**, so a half-failed destructive
+  action still leaves a trace. Clearing the audit log is itself audited, twice.
+- **Restore is additive.** Importing a stale backup can never remove a title someone has
+  ticked since.
+- **You can't demote, ban or delete yourself** from the panel.
+
+### Activity history
+
+Watch lists are Redis sets, which only describe *now*. Anything over time needs the toggles
+written down, so each one appends to three capped structures:
+
+```
+activity:log         last 5,000 toggles (LPUSH + LTRIM)
+stats:ticks:<date>   per-day counter, expires after 120 days
+stats:active:<date>  set of user ids seen that day, same expiry
+```
+
+Recording is best-effort and swallows its own errors — a logging failure must never stop
+someone ticking a film. Unticking is recorded but doesn't count toward the daily chart; it's
+a correction, and counting it would inflate the line.
+
+### A note on the chart colours
+
+`Universe.accent` is the vivid brand colour used for borders and glows. `Universe.chartAccent`
+is a second, validated set used only for **chart marks**. They're separate because the vivid
+accents fail as adjacent categorical bars — Sony blue and Legacy purple came out **ΔE 1.3
+apart under deuteranopia**, which is indistinguishable. The replacement set passes lightness
+band, chroma floor, CVD separation, normal-vision floor and contrast against the dark chart
+surface. Identity and data encoding are different jobs.
 
 ---
 

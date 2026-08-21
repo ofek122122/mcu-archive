@@ -1,7 +1,8 @@
 "use client";
 
 import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
-import { BarChart3, Clapperboard, Database, DatabaseZap, Dices, Layers, LogIn } from "lucide-react";
+import { BarChart3, Clapperboard, Database, DatabaseZap, Dices, Layers, LogIn, ShieldCheck } from "lucide-react";
+import Link from "next/link";
 
 import { PHASES } from "@/lib/universes";
 
@@ -18,6 +19,8 @@ type ProgressHeaderProps = {
   onViewChange: (view: ViewId) => void;
   /** Guest ticks held in the browser, shown as a nudge in the header. */
   guestPending: number;
+  /** Resolved on the server — the panel itself re-checks on every request. */
+  isAdmin: boolean;
   watchedCount: number;
   total: number;
   /** Watched / total per phase id, used for the tick marks. */
@@ -35,6 +38,7 @@ export function ProgressHeader({
   view,
   onViewChange,
   guestPending,
+  isAdmin,
   watchedCount,
   total,
   perPhase,
@@ -139,6 +143,16 @@ export function ProgressHeader({
                 <Database className="size-3.5" />
               )}
             </span>
+
+            {isAdmin ? (
+              <Link
+                href="/admin"
+                title="Admin panel"
+                className="flex size-8 items-center justify-center rounded-lg border border-gold/50 bg-gold/10 text-gold transition-colors hover:bg-gold/20"
+              >
+                <ShieldCheck className="size-4" />
+              </Link>
+            ) : null}
 
             {/* Clerk's own control component rather than a server-side
                 ternary: UserButton mounts a host node on the client that is not

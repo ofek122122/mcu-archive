@@ -52,6 +52,7 @@ type TrackerProps = {
   /** The signed-in account's watch list; empty for a guest. */
   watched: string[];
   signedIn: boolean;
+  isAdmin: boolean;
   /** Pre-Clerk PIN profiles still available to claim. */
   legacyProfiles: LegacyProfile[];
   databaseConnected: boolean;
@@ -74,6 +75,7 @@ export function Tracker({
   movies,
   watched,
   signedIn,
+  isAdmin,
   legacyProfiles,
   databaseConnected,
 }: TrackerProps) {
@@ -351,6 +353,7 @@ export function Tracker({
           view={view}
           onViewChange={setView}
           guestPending={guestWatched.length}
+          isAdmin={isAdmin}
           watchedCount={scopedWatched}
           total={scoped.length}
           perPhase={perPhase}

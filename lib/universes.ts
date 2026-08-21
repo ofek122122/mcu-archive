@@ -36,15 +36,24 @@ export type Universe = {
   label: string;
   short: string;
   blurb: string;
+  /** UI chrome — borders, glows, chips. Vivid, part of the visual identity. */
   accent: string;
+  /**
+   * Chart marks only. The vivid accents above fail a colourblind check when
+   * used as adjacent categorical bars — Sony blue and Legacy purple came out
+   * ΔE 1.3 apart under deuteranopia. This set was validated (lightness band,
+   * chroma floor, CVD separation, normal-vision floor, contrast) against the
+   * dark chart surface, so magnitude comparisons stay readable.
+   */
+  chartAccent: string;
 };
 
 export const UNIVERSES: Universe[] = [
-  { id: "mcu", label: "MCU", short: "MCU", blurb: "Marvel Studios", accent: "#ff3d5e" },
-  { id: "fox", label: "Fox / X-Men", short: "FOX", blurb: "20th Century Fox", accent: "#f0c419" },
-  { id: "sony", label: "Sony", short: "SONY", blurb: "Sony Pictures", accent: "#3b82f6" },
-  { id: "legacy", label: "Legacy", short: "LGCY", blurb: "Universal · New Line · Lionsgate", accent: "#8b5cf6" },
-  { id: "tv", label: "Marvel TV", short: "TV", blurb: "ABC · Netflix · Hulu · Freeform", accent: "#22c55e" },
+  { id: "mcu", label: "MCU", short: "MCU", blurb: "Marvel Studios", accent: "#ff3d5e", chartAccent: "#e11d48" },
+  { id: "fox", label: "Fox / X-Men", short: "FOX", blurb: "20th Century Fox", accent: "#f0c419", chartAccent: "#d97706" },
+  { id: "sony", label: "Sony", short: "SONY", blurb: "Sony Pictures", accent: "#3b82f6", chartAccent: "#0891b2" },
+  { id: "legacy", label: "Legacy", short: "LGCY", blurb: "Universal · New Line · Lionsgate", accent: "#8b5cf6", chartAccent: "#9333ea" },
+  { id: "tv", label: "Marvel TV", short: "TV", blurb: "ABC · Netflix · Hulu · Freeform", accent: "#22c55e", chartAccent: "#16a34a" },
 ];
 
 export const UNIVERSE_BY_ID = new Map(UNIVERSES.map((universe) => [universe.id, universe]));

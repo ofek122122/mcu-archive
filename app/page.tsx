@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 
+import { isAdmin } from "@/lib/admin";
 import { getCurrentUserId } from "@/lib/auth";
 import { countWatched, getWatchedMovies, isDatabaseConnected } from "@/lib/kv";
 import { listUsers } from "@/lib/legacy-users";
@@ -13,6 +14,7 @@ export default async function HomePage() {
   // The catalog is public: guests get the full browse experience and their
   // ticks live in the browser until they make an account.
   const watched = userId ? await getWatchedMovies(userId) : [];
+  const admin = userId ? await isAdmin() : false;
 
   // Pre-Clerk PIN profiles that still have progress waiting to be claimed.
   // Only offered to signed-in users, since claiming merges into an account.
@@ -39,6 +41,7 @@ export default async function HomePage() {
         movies={movies}
         watched={watched}
         signedIn={Boolean(userId)}
+        isAdmin={admin}
         legacyProfiles={legacyProfiles}
         databaseConnected={isDatabaseConnected()}
       />

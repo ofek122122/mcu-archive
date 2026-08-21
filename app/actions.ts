@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { recordActivity } from "@/lib/activity";
 import { requireUserId } from "@/lib/auth";
 import { getWatchedMovies, setWatched, setWatchedMany } from "@/lib/kv";
 import { MOVIE_IDS } from "@/lib/movies";
@@ -28,6 +29,8 @@ export async function toggleWatchedAction(movieId: string, watched: boolean): Pr
   assertKnown([movieId]);
 
   await setWatched(userId, movieId, watched);
+  // Best-effort history for the admin dashboard; never blocks the toggle.
+  await recordActivity(userId, movieId, watched);
   revalidatePath("/");
 }
 
@@ -44,6 +47,7 @@ export async function toggleManyWatchedAction(
   const known = assertKnown(movieIds);
 
   await setWatchedMany(userId, known, watched);
+  await recordActivity(userId, "*", watched, known.length);
   revalidatePath("/");
 }
 
@@ -64,6 +68,7 @@ export async function mergeGuestWatchedAction(movieIds: string[]): Promise<numbe
 
   if (fresh.length > 0) {
     await setWatchedMany(userId, fresh, true);
+    await recordActivity(userId, "*", true, fresh.length);
     revalidatePath("/");
   }
 

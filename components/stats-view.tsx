@@ -134,8 +134,8 @@ export function StatsView({ movies, watchedSet }: StatsViewProps) {
                   className="h-full rounded-full transition-[width] duration-700 ease-out"
                   style={{
                     width: `${row.percent}%`,
-                    backgroundColor: row.accent,
-                    boxShadow: `0 0 12px ${row.accent}aa`,
+                    backgroundColor: row.chartAccent,
+                    boxShadow: `0 0 12px ${row.chartAccent}aa`,
                   }}
                 />
               </div>
