@@ -1,6 +1,6 @@
 "use client";
 
-import { SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
+import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
 import { BarChart3, Clapperboard, Database, DatabaseZap, Dices, Layers, LogIn } from "lucide-react";
 
 import { PHASES } from "@/lib/universes";
@@ -16,8 +16,6 @@ const VIEWS: { id: ViewId; label: string; short: string; icon: typeof Layers }[]
 type ProgressHeaderProps = {
   view: ViewId;
   onViewChange: (view: ViewId) => void;
-  /** Null for a guest — the header then offers sign-in instead of a profile. */
-  signedIn: boolean;
   /** Guest ticks held in the browser, shown as a nudge in the header. */
   guestPending: number;
   watchedCount: number;
@@ -36,7 +34,6 @@ const METER_GRADIENT =
 export function ProgressHeader({
   view,
   onViewChange,
-  signedIn,
   guestPending,
   watchedCount,
   total,
@@ -143,12 +140,18 @@ export function ProgressHeader({
               )}
             </span>
 
-            {signedIn ? (
+            {/* Clerk's own control component rather than a server-side
+                ternary: UserButton mounts a host node on the client that is not
+                in the server HTML, so branching by hand hydration-mismatches.
+                Core 3 replaced <SignedIn>/<SignedOut> with <Show when=...>. */}
+            <Show when="signed-in">
               <UserButton
                 appearance={{ elements: { avatarBox: "size-8" } }}
                 userProfileProps={{ appearance: { elements: { profileSection: "bg-panel" } } }}
               />
-            ) : (
+            </Show>
+
+            <Show when="signed-out">
               <div className="flex items-center gap-1.5">
                 {/* Guests see what they stand to keep, not a bare login link */}
                 {guestPending > 0 ? (
@@ -181,7 +184,7 @@ export function ProgressHeader({
                   </button>
                 </SignUpButton>
               </div>
-            )}
+            </Show>
           </div>
         </div>
 

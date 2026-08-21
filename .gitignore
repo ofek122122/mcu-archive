@@ -45,6 +45,6 @@ next-env.d.ts
 /*.png
 
 .vercel
-.env*
 # ...but the documented template carries no secrets and should be committed.
 !.env.example
+

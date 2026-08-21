@@ -350,7 +350,6 @@ export function Tracker({
         <ProgressHeader
           view={view}
           onViewChange={setView}
-          signedIn={signedIn}
           guestPending={guestWatched.length}
           watchedCount={scopedWatched}
           total={scoped.length}
