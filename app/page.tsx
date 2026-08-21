@@ -5,6 +5,7 @@ import { getCurrentUserId } from "@/lib/auth";
 import { countWatched, getWatchedMovies, isDatabaseConnected } from "@/lib/kv";
 import { listUsers } from "@/lib/legacy-users";
 import { withReleaseStatus } from "@/lib/movies";
+import { detectRegion } from "@/lib/region";
 import { Tracker } from "@/components/tracker";
 import type { LegacyProfile } from "@/components/claim-legacy";
 
@@ -15,6 +16,7 @@ export default async function HomePage() {
   // ticks live in the browser until they make an account.
   const watched = userId ? await getWatchedMovies(userId) : [];
   const admin = userId ? await isAdmin() : false;
+  const region = await detectRegion();
 
   // Pre-Clerk PIN profiles that still have progress waiting to be claimed.
   // Only offered to signed-in users, since claiming merges into an account.
@@ -42,6 +44,7 @@ export default async function HomePage() {
         watched={watched}
         signedIn={Boolean(userId)}
         isAdmin={admin}
+        region={region}
         legacyProfiles={legacyProfiles}
         databaseConnected={isDatabaseConnected()}
       />

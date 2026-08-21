@@ -135,6 +135,7 @@ npx vercel env pull .env.local
 | `CLERK_SECRET_KEY` | Auto | Injected by the Clerk Marketplace integration |
 | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Auto | Injected by the Clerk Marketplace integration |
 | `ADMIN_EMAILS` | No | Comma-separated allowlist that bootstraps the first admin |
+| `TMDB_API_TOKEN` | No | TMDB read token; enables "where to watch". Feature hides itself without it |
 
 See `.env.example`.
 
@@ -159,6 +160,7 @@ State lives in a **Redis set per profile**, `user:<userId>:watched_movies`, hold
 app/
   actions.ts        Server Actions — toggles, guest merge, legacy claim
   admin/            Admin panel route + its Server Actions
+  api/watch/        Lazy where-to-watch lookup
   page.tsx          Loads the catalog for a guest or a signed-in account
   layout.tsx        Fonts, metadata, parallax backdrop mount
   globals.css       Tailwind v4 theme, glass + parallax utilities, keyframes
@@ -174,6 +176,7 @@ components/
   movie-card.tsx         Glass card, 3D tilt, poster, watched toggle
   compact-list.tsx       High-density checklist mode
   movie-modal.tsx        Full metadata panel
+  watch-providers.tsx    Where-to-watch, region picker, JustWatch credit
   roulette-modal.tsx     "What to watch next" cinematic reveal
   stats-view.tsx         Dashboard + Infinity Vault achievements
   admin/admin-panel.tsx  Admin panel — six tabs
@@ -191,6 +194,8 @@ lib/
   universes.ts      Phase + franchise colour stories
   heroes.ts         Character roster for the filter pills
   posters.ts        Movie id → TMDB poster path
+  region.ts         Geo-IP region detection
+  watch-providers.ts  TMDB/JustWatch availability, Redis-cached
   redis.ts          Shared Upstash client (with in-memory dev fallback)
   kv.ts             Per-user watched sets
   guest-store.ts    Browser-held guest list (useSyncExternalStore source)
@@ -271,6 +276,67 @@ accents fail as adjacent categorical bars — Sony blue and Legacy purple came o
 apart under deuteranopia**, which is indistinguishable. The replacement set passes lightness
 band, chroma floor, CVD separation, normal-vision floor and contrast against the dark chart
 surface. Identity and data encoding are different jobs.
+
+---
+
+## Where to watch
+
+Each title's detail panel shows where it can be streamed, rented or bought **in the viewer's
+own country**, because streaming rights are sold territory by territory — the honest answer
+in Tel Aviv is different from the one in London.
+
+**Source:** TMDB's `watch/providers` endpoint, which is their partnership with JustWatch.
+
+> ### ⚠️ Attribution is a hard requirement
+>
+> TMDB's terms: *"In order to use this data you must attribute the source of the data as
+> JustWatch. If we find any usage not complying with these terms we will revoke access to
+> the API."* Their guidance is that the credit belongs **on each media item**, not once in a
+> footer. That is why `components/watch-providers.tsx` renders it inside the section, beside
+> every result. Don't remove it.
+
+### Region detection
+
+Vercel puts the geo-IP country on every request as `x-vercel-ip-country`, so the region is
+resolved server-side at zero cost and with no permission prompt — unlike the browser
+geolocation API, which would be slower and far more intrusive for this. Locally the header
+is absent and it falls back to `US`.
+
+Geo-IP is a guess, so there's a region picker beside the heading. A chosen region is stored
+in `localStorage` and wins over geo-IP from then on, which matters for anyone travelling or
+behind a VPN.
+
+### Why this one thing is fetched at runtime
+
+Everything else in this app is a hardcoded constant on purpose. Availability is the
+exception: it changes weekly, per territory, with no warning, so baking it into the bundle
+would mean confidently shipping wrong answers. It's fetched on demand and cached in Redis:
+
+```
+tmdb:id:<imdbId>              permanent  — TMDB ids never change
+watch:<kind>:<id>:<region>    6 hours    — availability does
+```
+
+Empty results are cached too: "not available here" is a real answer, and re-asking TMDB for
+it on every modal open would be waste.
+
+The catalog stores IMDb ids, not TMDB ids, so the first lookup for a title maps one to the
+other via `/find` and caches it permanently — rather than adding a second hand-maintained id
+column to the data files.
+
+### Lazy by route handler
+
+`GET /api/watch/[movieId]?region=XX` is a route handler rather than server-rendered into the
+page. Pre-rendering availability for all 110 titles would be 110 TMDB calls per page load to
+answer a question nobody asked; the modal fetches it when it opens.
+
+### Setup
+
+Needs `TMDB_API_TOKEN` — the **API Read Access Token** (a long `eyJ…` JWT) from
+[TMDB → Settings → API](https://www.themoviedb.org/settings/api). Free.
+
+**Without it the feature disables itself**: the route returns `{ configured: false }` and the
+section doesn't render. Nothing else in the app depends on it.
 
 ---
 

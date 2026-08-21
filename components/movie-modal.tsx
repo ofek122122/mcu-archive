@@ -7,10 +7,13 @@ import { Calendar, Check, Clapperboard, Clock3, ExternalLink, Plus, Tv, X } from
 import { imdbUrl } from "@/lib/movies";
 import type { Theme, TrackedMovie } from "@/lib/types";
 import { ImdbBadge } from "@/components/imdb-badge";
+import { WatchProviders } from "@/components/watch-providers";
 
 type MovieModalProps = {
   movie: TrackedMovie;
   theme: Theme;
+  /** Geo-IP region resolved on the server; the picker can override it. */
+  region: string;
   watched: boolean;
   onToggle: (movie: TrackedMovie, next: boolean) => void;
   onClose: () => void;
@@ -23,7 +26,7 @@ const DATE_FORMAT = new Intl.DateTimeFormat("en-GB", {
   timeZone: "UTC",
 });
 
-export function MovieModal({ movie, theme, watched, onToggle, onClose }: MovieModalProps) {
+export function MovieModal({ movie, theme, region, watched, onToggle, onClose }: MovieModalProps) {
   const closeRef = useRef<HTMLButtonElement>(null);
   const [artFailed, setArtFailed] = useState(false);
 
@@ -172,6 +175,13 @@ export function MovieModal({ movie, theme, watched, onToggle, onClose }: MovieMo
                 }
               />
             </dl>
+
+            <WatchProviders
+              movieId={movie.id}
+              title={movie.title}
+              accent={theme.accent}
+              detectedRegion={region}
+            />
 
             <div className="mt-6 flex flex-col gap-2.5 sm:flex-row">
               <button

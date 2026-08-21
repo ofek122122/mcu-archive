@@ -53,6 +53,8 @@ type TrackerProps = {
   watched: string[];
   signedIn: boolean;
   isAdmin: boolean;
+  /** Viewer's country from Vercel's geo header, for where-to-watch. */
+  region: string;
   /** Pre-Clerk PIN profiles still available to claim. */
   legacyProfiles: LegacyProfile[];
   databaseConnected: boolean;
@@ -76,6 +78,7 @@ export function Tracker({
   watched,
   signedIn,
   isAdmin,
+  region,
   legacyProfiles,
   databaseConnected,
 }: TrackerProps) {
@@ -477,6 +480,7 @@ export function Tracker({
         <MovieModal
           movie={activeMovie}
           theme={themeFor(activeMovie)}
+          region={region}
           watched={watchedSet.has(activeMovie.id)}
           onToggle={handleToggle}
           onClose={() => setActiveMovie(null)}
