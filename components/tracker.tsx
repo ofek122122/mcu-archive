@@ -1,10 +1,29 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useOptimistic, useState, useTransition } from "react";
-import { CheckCheck, SearchX, Undo2 } from "lucide-react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useOptimistic,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  useTransition,
+} from "react";
+import { CheckCheck, CloudOff, SearchX, Undo2 } from "lucide-react";
+import { SignInButton, SignUpButton } from "@clerk/nextjs";
 
-import { toggleManyWatchedAction, toggleWatchedAction } from "@/app/actions";
+import { mergeGuestWatchedAction, toggleManyWatchedAction, toggleWatchedAction } from "@/app/actions";
+import {
+  clearGuestWatched,
+  getGuestWatchedServerSnapshot,
+  getGuestWatchedSnapshot,
+  hasBeenPrompted,
+  markPrompted,
+  subscribeGuestWatched,
+  writeGuestWatched,
+} from "@/lib/guest-store";
 import { CHARACTER_LABELS, HEROES } from "@/lib/heroes";
 import { MOVIES, themeFor } from "@/lib/movies";
 import { PHASES } from "@/lib/universes";
@@ -25,12 +44,16 @@ import { MovieModal } from "@/components/movie-modal";
 import { ProgressHeader, type ViewId } from "@/components/progress-header";
 import { RouletteModal } from "@/components/roulette-modal";
 import { StatsView } from "@/components/stats-view";
+import { SignupPrompt } from "@/components/signup-prompt";
+import { ClaimLegacy, type LegacyProfile } from "@/components/claim-legacy";
 
 type TrackerProps = {
   movies: TrackedMovie[];
+  /** The signed-in account's watch list; empty for a guest. */
   watched: string[];
-  /** Signed-in profile — each account keeps its own watch log. */
-  username: string;
+  signedIn: boolean;
+  /** Pre-Clerk PIN profiles still available to claim. */
+  legacyProfiles: LegacyProfile[];
   databaseConnected: boolean;
 };
 
@@ -44,7 +67,16 @@ const CATALOG_NUMBER = new Map(MOVIES.map((movie, index) => [movie.id, index + 1
 
 const HERO_IDS = new Set<string>(HEROES.map((hero) => hero.id));
 
-export function Tracker({ movies, watched, username, databaseConnected }: TrackerProps) {
+/** Stable empty reference, so a signed-in render never allocates a new array. */
+const EMPTY_IDS: string[] = [];
+
+export function Tracker({
+  movies,
+  watched,
+  signedIn,
+  legacyProfiles,
+  databaseConnected,
+}: TrackerProps) {
   const searchParams = useSearchParams();
 
   const [view, setView] = useState<ViewId>(() => parseView(searchParams.get("view")));
@@ -79,7 +111,42 @@ export function Tracker({ movies, watched, username, databaseConnected }: Tracke
     },
   );
 
-  const watchedSet = useMemo(() => new Set(optimisticWatched), [optimisticWatched]);
+  // ── Guest mode ────────────────────────────────────────────────────────────
+  // A guest's ticks live in localStorage, so they can browse and tick straight
+  // away without an account. On sign-in they are folded into the real list.
+  const storedGuest = useSyncExternalStore(
+    subscribeGuestWatched,
+    getGuestWatchedSnapshot,
+    getGuestWatchedServerSnapshot,
+  );
+  // Once signed in the account list is authoritative; the stored guest list is
+  // only still around until the merge effect below clears it.
+  const guestWatched = signedIn ? EMPTY_IDS : storedGuest;
+
+  const [promptFor, setPromptFor] = useState<string | null>(null);
+  const [merged, setMerged] = useState<number | null>(null);
+  const mergeStarted = useRef(false);
+
+  useEffect(() => {
+    if (!signedIn || mergeStarted.current) return;
+
+    const pending = getGuestWatchedSnapshot();
+    if (pending.length === 0) return;
+
+    // Guard with a ref rather than state: this must fire exactly once even if
+    // the effect re-runs before the server round trip resolves.
+    mergeStarted.current = true;
+    startTransition(async () => {
+      const carried = await mergeGuestWatchedAction(pending);
+      clearGuestWatched();
+      setMerged(carried);
+    });
+  }, [signedIn]);
+
+  const watchedSet = useMemo(
+    () => new Set(signedIn ? optimisticWatched : guestWatched),
+    [signedIn, optimisticWatched, guestWatched],
+  );
 
   // ── URL sync ──────────────────────────────────────────────────────────────
   // history.replaceState rather than router.replace: this page is dynamically
@@ -214,23 +281,56 @@ export function Tracker({ movies, watched, username, databaseConnected }: Tracke
   // ── Actions ───────────────────────────────────────────────────────────────
   const handleToggle = useCallback(
     (movie: TrackedMovie, next: boolean) => {
+      if (!signedIn) {
+        // Save first, then nudge — the tick is never lost to the prompt.
+        const current = getGuestWatchedSnapshot();
+        writeGuestWatched(
+          next
+            ? [...new Set([...current, movie.id])]
+            : current.filter((id) => id !== movie.id),
+        );
+
+        if (next && !hasBeenPrompted()) {
+          markPrompted();
+          setPromptFor(movie.title);
+        }
+        return;
+      }
+
       startTransition(async () => {
         applyToggle({ ids: [movie.id], next });
         await toggleWatchedAction(movie.id, next);
       });
     },
-    [applyToggle],
+    [applyToggle, signedIn],
   );
 
   const handleBatch = useCallback(
     (ids: string[], next: boolean) => {
       if (ids.length === 0) return;
+
+      if (!signedIn) {
+        const current = getGuestWatchedSnapshot();
+        const removing = new Set(ids);
+        writeGuestWatched(
+          next
+            ? [...new Set([...current, ...ids])]
+            : current.filter((id) => !removing.has(id)),
+        );
+
+        if (next && !hasBeenPrompted()) {
+          markPrompted();
+          setPromptFor(`${ids.length} titles`);
+        }
+        return;
+      }
+
       startTransition(async () => {
         applyToggle({ ids, next });
         await toggleManyWatchedAction(ids, next);
       });
     },
-    [applyToggle],
+    [applyToggle, signedIn],
   );
 
   const unwatchedPool = useMemo(
@@ -250,7 +350,8 @@ export function Tracker({ movies, watched, username, databaseConnected }: Tracke
         <ProgressHeader
           view={view}
           onViewChange={setView}
-          username={username}
+          signedIn={signedIn}
+          guestPending={guestWatched.length}
           watchedCount={scopedWatched}
           total={scoped.length}
           perPhase={perPhase}
@@ -291,6 +392,16 @@ export function Tracker({ movies, watched, username, databaseConnected }: Tracke
       </div>
 
       <main className="relative mx-auto max-w-[1500px] px-4 pt-8 pb-28 sm:px-6">
+        {signedIn ? <ClaimLegacy profiles={legacyProfiles} /> : <GuestBanner count={guestWatched.length} />}
+
+        {merged !== null && merged > 0 ? (
+          <div className="glass glass-edge mb-5 rounded-xl px-4 py-3">
+            <p className="font-mono text-[11px] tracking-brand text-emerald-400 uppercase">
+              {merged} {merged === 1 ? "title" : "titles"} carried over from this device
+            </p>
+          </div>
+        ) : null}
+
         {view === "stats" ? (
           <StatsView movies={scoped} watchedSet={watchedSet} />
         ) : visible.length === 0 ? (
@@ -368,6 +479,10 @@ export function Tracker({ movies, watched, username, databaseConnected }: Tracke
           onToggle={handleToggle}
           onClose={() => setActiveMovie(null)}
         />
+      ) : null}
+
+      {promptFor ? (
+        <SignupPrompt title={promptFor} onClose={() => setPromptFor(null)} />
       ) : null}
 
       {roulettePick ? (
@@ -550,6 +665,52 @@ function BatchBar({
         {allWatched ? <Undo2 className="size-3" /> : <CheckCheck className="size-3" />}
         {allWatched ? "Unmark these" : "Mark these watched"}
       </button>
+    </div>
+  );
+}
+
+/** Persistent reminder that a guest's ticks are device-local. */
+function GuestBanner({ count }: { count: number }) {
+  if (count === 0) return null;
+
+  return (
+    <div
+      className="glass glass-edge mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl px-4 py-3"
+      style={
+        {
+          "--edge-from": "rgba(245,197,24,0.6)",
+          "--edge-to": "rgba(245,197,24,0.2)",
+        } as React.CSSProperties
+      }
+    >
+      <p className="flex items-center gap-2.5 text-[13px] text-mist">
+        <CloudOff className="size-4 shrink-0 text-gold" />
+        <span>
+          <span className="text-bone">
+            {count} {count === 1 ? "title" : "titles"} saved on this device only.
+          </span>{" "}
+          Make a free account to keep them.
+        </span>
+      </p>
+
+      <div className="flex items-center gap-2">
+        <SignUpButton mode="modal">
+          <button
+            type="button"
+            className="cursor-pointer rounded-lg bg-marvel px-3 py-1.5 font-display text-xs tracking-wider text-white uppercase transition-colors hover:bg-[#f04747]"
+          >
+            Save my list
+          </button>
+        </SignUpButton>
+        <SignInButton mode="modal">
+          <button
+            type="button"
+            className="cursor-pointer rounded-lg border border-white/12 px-3 py-1.5 font-mono text-[10px] tracking-brand text-mist uppercase transition-colors hover:border-arc/50 hover:text-bone"
+          >
+            Sign in
+          </button>
+        </SignInButton>
+      </div>
     </div>
   );
 }

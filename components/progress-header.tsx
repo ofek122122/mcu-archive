@@ -1,9 +1,8 @@
 "use client";
 
-import { useTransition } from "react";
-import { BarChart3, Clapperboard, Database, DatabaseZap, Dices, Layers, LogOut } from "lucide-react";
+import { SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
+import { BarChart3, Clapperboard, Database, DatabaseZap, Dices, Layers, LogIn } from "lucide-react";
 
-import { logoutAction } from "@/app/actions";
 import { PHASES } from "@/lib/universes";
 
 export type ViewId = "all" | "mcu" | "stats";
@@ -17,7 +16,10 @@ const VIEWS: { id: ViewId; label: string; short: string; icon: typeof Layers }[]
 type ProgressHeaderProps = {
   view: ViewId;
   onViewChange: (view: ViewId) => void;
-  username: string;
+  /** Null for a guest — the header then offers sign-in instead of a profile. */
+  signedIn: boolean;
+  /** Guest ticks held in the browser, shown as a nudge in the header. */
+  guestPending: number;
   watchedCount: number;
   total: number;
   /** Watched / total per phase id, used for the tick marks. */
@@ -34,7 +36,8 @@ const METER_GRADIENT =
 export function ProgressHeader({
   view,
   onViewChange,
-  username,
+  signedIn,
+  guestPending,
   watchedCount,
   total,
   perPhase,
@@ -42,7 +45,6 @@ export function ProgressHeader({
   onRoulette,
   rouletteDisabled,
 }: ProgressHeaderProps) {
-  const [loggingOut, startLogout] = useTransition();
   const percent = total === 0 ? 0 : Math.round((watchedCount / total) * 100);
 
   // Cumulative phase boundaries, expressed as percentages of the slate.
@@ -141,23 +143,45 @@ export function ProgressHeader({
               )}
             </span>
 
-            {/* Signed-in profile — click to switch user */}
-            <button
-              type="button"
-              onClick={() => startLogout(async () => void (await logoutAction()))}
-              disabled={loggingOut}
-              title={`Signed in as ${username} — switch profile`}
-              aria-label={`Signed in as ${username}. Switch profile`}
-              className="flex cursor-pointer items-center gap-2 rounded-lg border border-white/10 py-1 pr-2 pl-1 text-mist transition-colors hover:border-arc/50 hover:text-bone disabled:opacity-50"
-            >
-              <span className="flex size-6 items-center justify-center rounded-full bg-arc/15 font-display text-[11px] text-arc uppercase">
-                {username.slice(0, 2)}
-              </span>
-              <span className="hidden max-w-24 truncate font-display text-xs tracking-wider uppercase lg:inline">
-                {username}
-              </span>
-              <LogOut className="size-3.5" />
-            </button>
+            {signedIn ? (
+              <UserButton
+                appearance={{ elements: { avatarBox: "size-8" } }}
+                userProfileProps={{ appearance: { elements: { profileSection: "bg-panel" } } }}
+              />
+            ) : (
+              <div className="flex items-center gap-1.5">
+                {/* Guests see what they stand to keep, not a bare login link */}
+                {guestPending > 0 ? (
+                  <span
+                    title={`${guestPending} ticked on this device only`}
+                    className="hidden font-mono text-[10px] tracking-brand text-gold uppercase sm:inline"
+                  >
+                    {guestPending} unsaved
+                  </span>
+                ) : null}
+
+                <SignInButton mode="modal">
+                  <button
+                    type="button"
+                    className="flex size-8 cursor-pointer items-center justify-center rounded-lg border border-white/10 text-mist transition-colors hover:border-arc/50 hover:text-bone sm:w-auto sm:gap-1.5 sm:px-3"
+                  >
+                    <LogIn className="size-3.5" />
+                    <span className="hidden font-display text-xs tracking-wider uppercase sm:inline">
+                      Sign in
+                    </span>
+                  </button>
+                </SignInButton>
+
+                <SignUpButton mode="modal">
+                  <button
+                    type="button"
+                    className="hidden cursor-pointer rounded-lg bg-marvel px-3 py-1.5 font-display text-xs tracking-wider text-white uppercase shadow-[0_0_18px_-4px_rgba(226,54,54,0.8)] transition-colors hover:bg-[#f04747] md:block"
+                  >
+                    Sign up
+                  </button>
+                </SignUpButton>
+              </div>
+            )}
           </div>
         </div>
 

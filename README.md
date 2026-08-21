@@ -26,6 +26,17 @@ That's it. Connecting the store injects `UPSTASH_REDIS_REST_URL` and
 `UPSTASH_REDIS_REST_TOKEN` into every environment automatically, and the app picks them up
 on the next boot. The header badge flips from **LOCAL** to **SYNCED** once it's live.
 
+**Accounts** are provisioned the same way:
+
+```bash
+vercel integration add clerk --plan hobby_2025_08
+```
+
+Clerk's Hobby plan is free to around 10,000 monthly active users. It injects
+`CLERK_SECRET_KEY` and `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`. Both integrations require you to
+accept the provider's terms in the browser once — the CLI prints the link and cannot do it
+for you.
+
 > ### ℹ️ A note on "Vercel KV"
 >
 > The original spec for this app called for `@vercel/kv`. **Vercel KV has been sunset** —
@@ -43,37 +54,54 @@ on the next boot. The header badge flips from **LOCAL** to **SYNCED** once it's 
 
 ## Accounts
 
-Anyone can create a profile: a username and a **4-digit PIN**. Each profile keeps its own
-watch log under `user:<id>:watched_movies`, so several people can track the same catalog
-independently.
+Identity is handled by **Clerk**, installed through the Vercel Marketplace. The app never
+sees or stores a password: email/password, email verification, password reset, breached
+password detection and rate limiting all live on Clerk's side. All this codebase keeps is
+the Clerk user id, used as the key for that person's watch list in Redis.
 
-The sign-in screen is a **public directory** — every username is listed with its completion
-count, and picking one asks for that profile's PIN. Switching profile is the avatar button
-in the top-right.
+That is a deliberate trade. The previous 4-digit PIN system was fine while the archive was
+private, but it is not something to point real users at — 10,000 combinations against a
+public username list. Handing credentials to a provider whose job is credentials removes
+the most dangerous thing this app could have been holding.
 
-The session is an `httpOnly`, `sameSite=lax` cookie holding `<userId>.<token>`, where the
-token is derived from the stored PIN hash — the PIN itself never leaves the login form, and
-changing a PIN invalidates existing sessions for free. It lasts 180 days. Every write
-re-checks the session server-side and scopes to that user, so a leaked Server Action
-endpoint can't be used to edit someone else's log.
+### Guests
 
-> ### ⚠️ A 4-digit PIN is a soft lock, not real security
->
-> Four digits is 10,000 combinations, and the usernames are public by design. That is fine
-> for stopping housemates ticking each other's films off; it is **not** protection for
-> anything sensitive. Don't reuse a PIN that guards something that matters.
->
-> Two mitigations are in place:
->
-> - PINs are hashed with **scrypt** and a per-user random salt, so a dump of the store
->   can't be reversed with a lookup table.
-> - Failed logins are counted per user and locked out after **8 attempts in 10 minutes**,
->   which makes online brute force impractical.
->
-> If you later want this properly locked down, the upgrade is longer PINs or an OAuth
-> provider — the session layer in `lib/auth.ts` wouldn't have to change much.
+The catalog is public. Anyone can browse, filter, search and tick titles without an
+account. Guest ticks are held in `localStorage`, not Redis:
 
-`APP_PASSCODE` is no longer used and can be deleted from your Vercel environment variables.
+- The **first** tick opens a prompt explaining that the tick is saved on this device only,
+  and offering to make an account. It is a nudge, not a wall — the tick already happened,
+  and "keep browsing as a guest" is right there.
+- A banner keeps the count visible while a guest has unsaved ticks.
+- On sign-in, `mergeGuestWatchedAction` folds those ticks into the account and clears the
+  local copy. The merge is **additive only**: it never unticks anything, so signing in on a
+  second device with a stale guest list cannot erase progress made elsewhere.
+
+The guest list is exposed to React through `useSyncExternalStore` rather than read into
+state inside an effect. localStorage genuinely is an external store, and the server
+snapshot is an empty list, so the first client render matches the server HTML.
+
+### Claiming a pre-Clerk profile
+
+The old PIN profiles still hold real progress, so `lib/legacy-users.ts` survives with just
+enough surface to hand it over: list the profiles, verify a PIN, delete on success. A
+signed-in user sees a "claim your old profile" banner while any unclaimed profile remains;
+entering the right PIN merges that watch list into their account and removes the old
+profile. The PIN check runs through the original scrypt comparison and the original
+per-profile lockout, so it is no weaker than the login it replaces.
+
+Creating new PIN profiles is gone. Once the last legacy profile is claimed, that file and
+its `users` hash can be deleted outright.
+
+### Where the guards actually are
+
+`proxy.ts` runs `clerkMiddleware()` but protects **no** routes — the catalog is meant to be
+public. Every write instead calls `requireUserId()` inside the Server Action, which is the
+only place it matters. A guest hitting one of those is a bug or an attack, not a normal
+path, so it throws rather than degrading.
+
+> Note the filename: **Next.js 16 renamed Middleware to Proxy**, so this lives in
+> `proxy.ts`, not the `middleware.ts` that most Clerk guides still show.
 
 ---
 
@@ -104,6 +132,8 @@ npx vercel env pull .env.local
 |---|---|---|
 | `UPSTASH_REDIS_REST_URL` | Auto | Injected by the Vercel Storage integration |
 | `UPSTASH_REDIS_REST_TOKEN` | Auto | Injected by the Vercel Storage integration |
+| `CLERK_SECRET_KEY` | Auto | Injected by the Clerk Marketplace integration |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Auto | Injected by the Clerk Marketplace integration |
 
 See `.env.example`.
 
@@ -126,14 +156,15 @@ State lives in a **Redis set per profile**, `user:<userId>:watched_movies`, hold
 
 ```
 app/
-  actions.ts        Server Actions — login, create user, logout, toggles
-  page.tsx          Session check → auth gate or tracker
+  actions.ts        Server Actions — toggles, guest merge, legacy claim
+  page.tsx          Loads the catalog for a guest or a signed-in account
   layout.tsx        Fonts, metadata, parallax backdrop mount
   globals.css       Tailwind v4 theme, glass + parallax utilities, keyframes
 components/
   parallax-backdrop.tsx  Multi-layer cosmic parallax (client)
-  auth-gate.tsx          Profile picker, PIN entry, account creation
-  pin-input.tsx          Four auto-advancing digit boxes
+  signup-prompt.tsx      First-tick nudge for guests
+  claim-legacy.tsx       One-time migration of a pre-Clerk PIN profile
+  pin-input.tsx          Four auto-advancing digit boxes (claim flow only)
   tracker.tsx            Views, filters, URL sync, grouping, batch actions
   progress-header.tsx    View nav, progress meter, Infinity Roulette
   filter-bar.tsx         Search, status, studios, phases, sort, density
@@ -157,8 +188,10 @@ lib/
   posters.ts        Movie id → TMDB poster path
   redis.ts          Shared Upstash client (with in-memory dev fallback)
   kv.ts             Per-user watched sets
-  users.ts          Accounts, scrypt PIN hashing, login throttling
-  auth.ts           Session cookie
+  guest-store.ts    Browser-held guest list (useSyncExternalStore source)
+  legacy-users.ts   Pre-Clerk PIN profiles, kept for migration only
+  auth.ts           Clerk session helpers
+proxy.ts            Clerk middleware (Next 16 calls this Proxy)
 ```
 
 ---

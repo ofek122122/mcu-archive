@@ -1,70 +1,33 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 
-import { createSession, destroySession, getCurrentUser } from "@/lib/auth";
-import { setWatched, setWatchedMany } from "@/lib/kv";
+import { requireUserId } from "@/lib/auth";
+import { getWatchedMovies, setWatched, setWatchedMany } from "@/lib/kv";
 import { MOVIE_IDS } from "@/lib/movies";
-import { createUser, verifyPin } from "@/lib/users";
+import { deleteLegacyProfile, toUserId, validatePin, verifyPin } from "@/lib/legacy-users";
 
-export type AuthState = { error: string | null };
-
-/** Sign in as an existing user with their 4-digit PIN. */
-export async function loginAction(_prev: AuthState, formData: FormData): Promise<AuthState> {
-  const userId = String(formData.get("userId") ?? "").trim();
-  const pin = String(formData.get("pin") ?? "").trim();
-
-  if (!userId) return { error: "Pick a user first." };
-  if (!pin) return { error: "Enter your 4-digit PIN." };
-
-  const result = await verifyPin(userId, pin);
-  if (!result.ok) return { error: result.error };
-
-  await createSession(result.user.id, result.token);
-  revalidatePath("/");
-  redirect("/");
-}
-
-/** Create a new account and sign straight into it. */
-export async function createUserAction(
-  _prev: AuthState,
-  formData: FormData,
-): Promise<AuthState> {
-  const username = String(formData.get("username") ?? "");
-  const pin = String(formData.get("pin") ?? "").trim();
-  const confirm = String(formData.get("confirmPin") ?? "").trim();
-
-  if (pin !== confirm) return { error: "The two PINs do not match." };
-
-  const result = await createUser(username, pin);
-  if (!result.ok) return { error: result.error };
-
-  await createSession(result.user.id, result.token);
-  revalidatePath("/");
-  redirect("/");
-}
-
-export async function logoutAction(): Promise<void> {
-  await destroySession();
-  revalidatePath("/");
-  redirect("/");
+/** Reject anything that is not a known catalog id before it reaches Redis. */
+function assertKnown(movieIds: string[]): string[] {
+  const known = movieIds.filter((id) => MOVIE_IDS.has(id));
+  if (known.length !== movieIds.length) {
+    throw new Error("Unknown movie id");
+  }
+  return known;
 }
 
 /**
- * Flip a single film's watched state for the signed-in user and push it
- * straight to Redis, then revalidate so their other devices pick the change up.
+ * Flip a single title's watched state for the signed-in user and push it
+ * straight to Redis, then revalidate so their other devices pick it up.
+ *
+ * Guests never reach this — their ticks live in the browser until they make an
+ * account, at which point `mergeGuestWatchedAction` carries them across.
  */
 export async function toggleWatchedAction(movieId: string, watched: boolean): Promise<void> {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error("Unauthorized");
-  }
-  if (!MOVIE_IDS.has(movieId)) {
-    throw new Error(`Unknown movie id: ${movieId}`);
-  }
+  const userId = await requireUserId();
+  assertKnown([movieId]);
 
-  await setWatched(user.id, movieId, watched);
+  await setWatched(userId, movieId, watched);
   revalidatePath("/");
 }
 
@@ -77,16 +40,76 @@ export async function toggleManyWatchedAction(
   movieIds: string[],
   watched: boolean,
 ): Promise<void> {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error("Unauthorized");
-  }
+  const userId = await requireUserId();
+  const known = assertKnown(movieIds);
 
-  const known = movieIds.filter((id) => MOVIE_IDS.has(id));
-  if (known.length !== movieIds.length) {
-    throw new Error("Unknown movie id in batch");
-  }
-
-  await setWatchedMany(user.id, known, watched);
+  await setWatchedMany(userId, known, watched);
   revalidatePath("/");
+}
+
+/**
+ * Fold a guest's browser-held ticks into their new account.
+ *
+ * Additive only — it never unticks anything, so signing in on a second device
+ * with a stale guest list cannot erase progress made elsewhere. Returns how
+ * many were genuinely new so the UI can say something honest.
+ */
+export async function mergeGuestWatchedAction(movieIds: string[]): Promise<number> {
+  const userId = await requireUserId();
+  const known = assertKnown(movieIds);
+  if (known.length === 0) return 0;
+
+  const existing = new Set(await getWatchedMovies(userId));
+  const fresh = known.filter((id) => !existing.has(id));
+
+  if (fresh.length > 0) {
+    await setWatchedMany(userId, fresh, true);
+    revalidatePath("/");
+  }
+
+  return fresh.length;
+}
+
+export type ClaimState = { error: string | null; claimed: number | null };
+
+/**
+ * One-time migration: prove ownership of a pre-Clerk PIN profile and absorb its
+ * watch list into the signed-in account, then delete the old profile.
+ *
+ * The PIN check runs through the original scrypt comparison and the original
+ * per-profile lockout, so this is no weaker than the old login it replaces.
+ */
+export async function claimLegacyProfileAction(
+  _prev: ClaimState,
+  formData: FormData,
+): Promise<ClaimState> {
+  const userId = await requireUserId();
+
+  const username = String(formData.get("username") ?? "").trim();
+  const pin = String(formData.get("pin") ?? "").trim();
+
+  if (!username) return { error: "Pick a profile to claim.", claimed: null };
+
+  const pinError = validatePin(pin);
+  if (pinError) return { error: pinError, claimed: null };
+
+  const legacyId = toUserId(username);
+  const result = await verifyPin(legacyId, pin);
+  if (!result.ok) return { error: result.error, claimed: null };
+
+  // Carry the list over before removing the profile, so a failure midway
+  // leaves the old profile intact and the claim simply retryable.
+  const legacyWatched = await getWatchedMovies(legacyId);
+  const known = legacyWatched.filter((id) => MOVIE_IDS.has(id));
+
+  if (known.length > 0) {
+    const existing = new Set(await getWatchedMovies(userId));
+    const fresh = known.filter((id) => !existing.has(id));
+    if (fresh.length > 0) await setWatchedMany(userId, fresh, true);
+  }
+
+  await deleteLegacyProfile(legacyId);
+  revalidatePath("/");
+
+  return { error: null, claimed: known.length };
 }

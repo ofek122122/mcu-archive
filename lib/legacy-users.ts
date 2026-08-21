@@ -1,28 +1,20 @@
 /**
- * User accounts.
+ * Legacy PIN profiles — read-only, kept for one-time migration.
  *
- * Every visitor picks a username and a 4-digit PIN; each account keeps its own
- * watch progress under `user:<id>:watched_movies`.
+ * Before Clerk, accounts here were a username plus a 4-digit PIN hashed with
+ * scrypt. Those profiles still hold real watch progress, so this module stays
+ * alive with exactly enough surface to let their owner prove ownership once and
+ * carry the list across: list the profiles, verify a PIN, delete on success.
  *
- * ── On the security of 4-digit PINs ────────────────────────────────────────
- * A 4-digit PIN is 10,000 combinations and the username list is public by
- * design, so this is a *soft* lock — enough to stop housemates ticking each
- * other's films off, not enough to protect anything sensitive. Two mitigations
- * are in place:
- *
- *   1. PINs are hashed with scrypt and a per-user random salt, so a dump of the
- *      store cannot be reversed with a rainbow table.
- *   2. Failed logins are counted per user and locked out after MAX_ATTEMPTS
- *      within the window, which makes online brute force impractical.
- *
- * Do not reuse a PIN here that guards anything that matters.
+ * Creating new PIN profiles is gone. When the last legacy profile is claimed
+ * this file and its `users` hash can be deleted outright.
  */
-import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
+import { scryptSync, timingSafeEqual } from "node:crypto";
 
+import { watchedKey } from "@/lib/kv";
 import { getClient } from "@/lib/redis";
 
 const USERS_KEY = "users";
-const LEGACY_WATCHED_KEY = "user:watched_movies";
 
 /** Failed-login throttle. */
 const MAX_ATTEMPTS = 8;
@@ -44,21 +36,10 @@ const memoryAttempts = new Map<string, number>();
 // ── Validation ──────────────────────────────────────────────────────────────
 
 export const PIN_LENGTH = 4;
-const USERNAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9 _-]{1,15}$/;
 
 /** Normalised key for a username — this is the account id. */
 export function toUserId(username: string): string {
   return username.trim().toLowerCase().replace(/\s+/g, "-");
-}
-
-export function validateUsername(username: string): string | null {
-  const trimmed = username.trim();
-  if (trimmed.length < 2) return "Username needs at least 2 characters.";
-  if (trimmed.length > 16) return "Username can be at most 16 characters.";
-  if (!USERNAME_PATTERN.test(trimmed)) {
-    return "Use letters, numbers, spaces, hyphens or underscores.";
-  }
-  return null;
 }
 
 export function validatePin(pin: string): string | null {
@@ -80,14 +61,6 @@ function constantTimeEquals(a: string, b: string): boolean {
   if (bufA.length !== bufB.length) return false;
   return timingSafeEqual(bufA, bufB);
 }
-
-/** Opaque session token for a user — depends on the stored hash, so changing
- *  the PIN invalidates existing sessions. */
-export function sessionTokenFor(user: { id: string; hash: string }): string {
-  return scryptSync(`${user.id}:${user.hash}`, "mcu-archive-session", 24).toString("hex");
-}
-
-// ── Storage ─────────────────────────────────────────────────────────────────
 
 async function readAll(): Promise<StoredUser[]> {
   const redis = getClient();
@@ -127,68 +100,7 @@ export async function listUsers(): Promise<User[]> {
     .sort((a, b) => a.username.localeCompare(b.username));
 }
 
-export async function getUser(id: string): Promise<User | null> {
-  const stored = await readOne(id);
-  if (!stored) return null;
-  return { id: stored.id, username: stored.username, createdAt: stored.createdAt };
-}
-
-export type CreateResult =
-  | { ok: true; user: User; token: string }
-  | { ok: false; error: string };
-
-export async function createUser(username: string, pin: string): Promise<CreateResult> {
-  const usernameError = validateUsername(username);
-  if (usernameError) return { ok: false, error: usernameError };
-
-  const pinError = validatePin(pin);
-  if (pinError) return { ok: false, error: pinError };
-
-  const id = toUserId(username);
-  if (await readOne(id)) return { ok: false, error: "That username is already taken." };
-
-  const salt = randomBytes(16).toString("hex");
-  const stored: StoredUser = {
-    id,
-    username: username.trim(),
-    createdAt: new Date().toISOString(),
-    salt,
-    hash: hashPin(pin, salt),
-  };
-
-  const redis = getClient();
-  if (!redis) {
-    memoryUsers.set(id, stored);
-  } else {
-    await redis.hset(USERS_KEY, { [id]: JSON.stringify(stored) });
-
-    // One-time migration: the pre-accounts build kept a single shared set. If
-    // it still holds anything, hand it to the first account created so the
-    // existing progress is not stranded.
-    try {
-      const existingUsers = await redis.hlen(USERS_KEY);
-      if (existingUsers === 1) {
-        const legacy = (await redis.smembers(LEGACY_WATCHED_KEY)) as unknown as string[];
-        if (legacy.length > 0) {
-          const [first, ...rest] = legacy;
-          await redis.sadd(`user:${id}:watched_movies`, first, ...rest);
-        }
-      }
-    } catch (error) {
-      console.error("[users] legacy migration skipped:", error);
-    }
-  }
-
-  return {
-    ok: true,
-    user: { id: stored.id, username: stored.username, createdAt: stored.createdAt },
-    token: sessionTokenFor(stored),
-  };
-}
-
-export type VerifyResult =
-  | { ok: true; user: User; token: string }
-  | { ok: false; error: string };
+export type VerifyResult = { ok: true; user: User } | { ok: false; error: string };
 
 export async function verifyPin(id: string, pin: string): Promise<VerifyResult> {
   if (await isLockedOut(id)) {
@@ -207,14 +119,7 @@ export async function verifyPin(id: string, pin: string): Promise<VerifyResult> 
   return {
     ok: true,
     user: { id: stored.id, username: stored.username, createdAt: stored.createdAt },
-    token: sessionTokenFor(stored),
   };
-}
-
-/** Re-derive a user's session token, for validating an incoming cookie. */
-export async function tokenFor(id: string): Promise<string | null> {
-  const stored = await readOne(id);
-  return stored ? sessionTokenFor(stored) : null;
 }
 
 // ── Throttling ──────────────────────────────────────────────────────────────
@@ -262,4 +167,20 @@ async function clearFailures(id: string): Promise<void> {
   } catch {
     // Non-fatal: the key expires on its own.
   }
+}
+
+/** Remove a legacy profile and its watch set once it has been claimed. */
+export async function deleteLegacyProfile(id: string): Promise<void> {
+  const redis = getClient();
+  if (!redis) {
+    memoryUsers.delete(id);
+    memoryAttempts.delete(id);
+    return;
+  }
+
+  // Safe to drop the watch set here: the claim action copies it across first
+  // and only calls this on success, so nothing is lost.
+  await redis.hdel(USERS_KEY, id);
+  await redis.del(watchedKey(id));
+  await redis.del(attemptKey(id));
 }

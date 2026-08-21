@@ -1,31 +1,32 @@
 import { Suspense } from "react";
 
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUserId } from "@/lib/auth";
 import { countWatched, getWatchedMovies, isDatabaseConnected } from "@/lib/kv";
-import { TOTAL_MOVIES, withReleaseStatus } from "@/lib/movies";
-import { listUsers } from "@/lib/users";
-import { AuthGate, type PublicUser } from "@/components/auth-gate";
+import { listUsers } from "@/lib/legacy-users";
+import { withReleaseStatus } from "@/lib/movies";
 import { Tracker } from "@/components/tracker";
+import type { LegacyProfile } from "@/components/claim-legacy";
 
 export default async function HomePage() {
-  const user = await getCurrentUser();
+  const userId = await getCurrentUserId();
 
-  if (!user) {
-    // The directory is public by design — anyone can see who has a profile,
-    // but each profile still needs its own PIN to open.
-    const users = await listUsers();
-    const withCounts: PublicUser[] = await Promise.all(
-      users.map(async (entry) => ({
-        id: entry.id,
-        username: entry.username,
-        watched: await countWatched(entry.id),
+  // The catalog is public: guests get the full browse experience and their
+  // ticks live in the browser until they make an account.
+  const watched = userId ? await getWatchedMovies(userId) : [];
+
+  // Pre-Clerk PIN profiles that still have progress waiting to be claimed.
+  // Only offered to signed-in users, since claiming merges into an account.
+  let legacyProfiles: LegacyProfile[] = [];
+  if (userId) {
+    const legacy = await listUsers();
+    legacyProfiles = await Promise.all(
+      legacy.map(async (profile) => ({
+        id: profile.id,
+        username: profile.username,
+        watched: await countWatched(profile.id),
       })),
     );
-
-    return <AuthGate users={withCounts} total={TOTAL_MOVIES} />;
   }
-
-  const watched = await getWatchedMovies(user.id);
 
   // Release status is resolved server-side so hydration stays deterministic.
   const movies = withReleaseStatus();
@@ -37,7 +38,8 @@ export default async function HomePage() {
       <Tracker
         movies={movies}
         watched={watched}
-        username={user.username}
+        signedIn={Boolean(userId)}
+        legacyProfiles={legacyProfiles}
         databaseConnected={isDatabaseConnected()}
       />
     </Suspense>

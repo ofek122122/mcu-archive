@@ -1,52 +1,29 @@
 /**
- * Session handling.
+ * Session handling — Clerk.
  *
- * The cookie stores `<userId>.<token>`, where the token is derived from the
- * user's stored PIN hash. The PIN itself never leaves the login form, and
- * changing a PIN invalidates any existing session for free.
+ * Clerk owns identity: email/password, verification, reset, breached-password
+ * checks and rate limiting all happen on their side, so this app never sees or
+ * stores a password. We keep only the Clerk user id, and use it as the key for
+ * that person's watch list in Redis.
+ *
+ * The previous system (username + 4-digit PIN, hashed here) is retained in
+ * `lib/legacy-users.ts` purely so existing profiles can be claimed once and
+ * carried over. See `claimLegacyProfileAction`.
  */
-import { timingSafeEqual } from "node:crypto";
-import { cookies } from "next/headers";
+import { auth } from "@clerk/nextjs/server";
 
-import { getUser, tokenFor, type User } from "@/lib/users";
-
-const COOKIE_NAME = "mcu_session";
-const SESSION_DAYS = 180;
-
-function constantTimeEquals(a: string, b: string): boolean {
-  const bufA = Buffer.from(a, "utf8");
-  const bufB = Buffer.from(b, "utf8");
-  if (bufA.length !== bufB.length) return false;
-  return timingSafeEqual(bufA, bufB);
+/** The signed-in Clerk user id, or null for a guest. */
+export async function getCurrentUserId(): Promise<string | null> {
+  const { userId } = await auth();
+  return userId;
 }
 
-/** The signed-in user, or null. Also returns null if the account has gone. */
-export async function getCurrentUser(): Promise<User | null> {
-  const raw = (await cookies()).get(COOKIE_NAME)?.value;
-  if (!raw) return null;
-
-  const separator = raw.lastIndexOf(".");
-  if (separator <= 0) return null;
-
-  const id = raw.slice(0, separator);
-  const token = raw.slice(separator + 1);
-
-  const expected = await tokenFor(id);
-  if (!expected || !constantTimeEquals(token, expected)) return null;
-
-  return getUser(id);
-}
-
-export async function createSession(userId: string, token: string): Promise<void> {
-  (await cookies()).set(COOKIE_NAME, `${userId}.${token}`, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: SESSION_DAYS * 24 * 60 * 60,
-  });
-}
-
-export async function destroySession(): Promise<void> {
-  (await cookies()).delete(COOKIE_NAME);
+/**
+ * The signed-in user id, or a thrown error. Use in Server Actions that write —
+ * a guest reaching one of those is a bug or an attack, not a normal path.
+ */
+export async function requireUserId(): Promise<string> {
+  const userId = await getCurrentUserId();
+  if (!userId) throw new Error("Unauthorized");
+  return userId;
 }

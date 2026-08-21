@@ -1,6 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Anton, Barlow, JetBrains_Mono } from "next/font/google";
 
+import { ClerkProvider } from "@clerk/nextjs";
+import { dark } from "@clerk/themes";
+
 import { ParallaxBackdrop } from "@/components/parallax-backdrop";
 
 import "./globals.css";
@@ -45,8 +48,24 @@ export default function RootLayout({
       className={`${anton.variable} ${barlow.variable} ${jetbrainsMono.variable}`}
     >
       <body>
-        <ParallaxBackdrop />
-        <div className="relative z-10">{children}</div>
+        {/* Clerk's own modals are themed to match the archive rather than
+            arriving as a bright white box over a dark starfield. */}
+        <ClerkProvider
+          appearance={{
+            theme: dark,
+            variables: {
+              colorPrimary: "#e23636",
+              colorBackground: "#0e0e18",
+              colorForeground: "#edebe6",
+              colorMutedForeground: "#8a8a9d",
+              colorInput: "#04040a",
+              borderRadius: "0.75rem",
+            },
+          }}
+        >
+          <ParallaxBackdrop />
+          <div className="relative z-10">{children}</div>
+        </ClerkProvider>
       </body>
     </html>
   );
