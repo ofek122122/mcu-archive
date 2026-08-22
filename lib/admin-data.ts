@@ -15,7 +15,7 @@ import { POSTER_PATHS } from "@/lib/posters";
  * Read models for the admin dashboard.
  *
  * Everything is derived on demand from Clerk plus Redis rather than kept in a
- * denormalised table — the catalog is 110 titles and the user count is small,
+ * denormalised table — the catalog is 114 titles and the user count is small,
  * so a handful of round trips is cheaper than the correctness risk of a cache
  * that can drift from the sets it summarises.
  */

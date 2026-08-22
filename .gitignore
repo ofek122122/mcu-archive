@@ -48,3 +48,5 @@ next-env.d.ts
 # ...but the documented template carries no secrets and should be committed.
 !.env.example
 
+watchlist-backup.json
+migrate.mjs

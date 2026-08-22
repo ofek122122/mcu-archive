@@ -1,6 +1,6 @@
 # MCU Archive
 
-A PIN-gated, multi-profile tracker for **110 Marvel titles** — 79 films and 31 series —
+An account-gated, multi-profile tracker for **114 Marvel titles** — 79 films and 35 series —
 across Marvel Studios, Fox, Sony, Universal, New Line, Lionsgate, ABC, Netflix, Hulu and
 Freeform. Built with Next.js (App Router), TypeScript,
 Tailwind CSS, and Redis via Server Actions. Every profile keeps its own watch log.
@@ -235,7 +235,7 @@ unverified address to an account can't escalate it.
 |---|---|
 | **Overview** | Accounts, signups this week, active today/7d, total ticks, combined watch time, never-watched count · ticks-per-day chart · most-watched titles · completion leaderboard · per-universe totals · live activity feed |
 | **Users** | Every account with completion, join date and last seen. Expand a row to see and edit exactly what they've ticked. Promote/demote, block sign-in, reset list, delete account |
-| **Titles** | All 110 titles ranked by how many accounts ticked them, most or least first, searchable |
+| **Titles** | All 114 titles ranked by how many accounts ticked them, most or least first, searchable |
 | **Catalog** | Health checks — missing posters, unrated titles, unreleased, duplicate IMDb ids, and orphaned watch lists whose owner no longer exists (with one-click cleanup) |
 | **Data** | JSON backup download · additive restore · legacy PIN profile management · danger zone |
 | **Audit** | Every admin write, newest first |
@@ -327,7 +327,7 @@ column to the data files.
 ### Lazy by route handler
 
 `GET /api/watch/[movieId]?region=XX` is a route handler rather than server-rendered into the
-page. Pre-rendering availability for all 110 titles would be 110 TMDB calls per page load to
+page. Pre-rendering availability for all 114 titles would be 114 TMDB calls per page load to
 answer a question nobody asked; the modal fetches it when it opens.
 
 ### Setup
@@ -342,7 +342,7 @@ section doesn't render. Nothing else in the app depends on it.
 
 ## Views and filtering
 
-**110 titles** — 79 films and 31 series — across Marvel Studios, 20th Century Fox, Sony,
+**114 titles** — 79 films and 35 series — across Marvel Studios, 20th Century Fox, Sony,
 Universal, New Line, Lionsgate, ABC, Netflix, Hulu and Freeform.
 
 | View | What it shows |
@@ -360,15 +360,21 @@ published timeline where one exists and makes a judgement call where it does not
 
 ### Films and series
 
-Series are modelled one entry per *show*, not per season: Loki covers both seasons,
-What If...? all three. `runtime` holds the **total** minutes across every episode, so watch
-time, the runtime sort and progress counts treat both kinds identically. Cards show
-"2 seasons · 12 eps" where a film shows its runtime; the modal gives the hour total.
+Series are modelled one entry per *show* — except where a show's seasons are separated by
+films in story order, which is Loki, What If...? and I Am Groot. Those are split one entry
+per season, because a single entry can hold only one place on the chronological timeline and
+Loki's two seasons are eighteen titles apart on it: season 1 opens as Endgame's time heist
+ends, season 2 picks up the Kang thread Quantumania leaves running. Split entries carry
+`season` and a shared `showId`, and use TMDB's per-season art rather than the show poster.
+
+`runtime` holds the **total** minutes across that entry's episodes, so watch time, the runtime
+sort and progress counts treat films and series identically. Cards show "3 seasons · 39 eps"
+where a film shows its runtime; the modal gives the hour total.
 
 A three-way **Everything / Movies / Series** toggle sits in the filter bar. It is deliberately
 scoped rather than cosmetic: choosing **Movies** removes series from the progress meter, the
 stats dashboard and the roulette pool as well as the grid — the MCU Timeline drops from
-60 titles back to the original 40 films. It is linkable as `?kind=movie`.
+64 titles back to the original 40 films. It is linkable as `?kind=movie`.
 
 **Where the series live.** Marvel Studios' Disney+ series carry a `phase` and sit in the MCU
 universe alongside the films. The older Marvel Television shows — the ABC, Netflix, Hulu and

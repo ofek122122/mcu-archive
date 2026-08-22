@@ -14,6 +14,14 @@
  * Eyes of Wakanda ranges over centuries and is placed at its earliest story.
  * This ordering follows Marvel's own published timeline where one exists and
  * makes a judgement call where it does not.
+ *
+ * -- Seasons are placed individually ----------------------------------------
+ * A show whose seasons are separated by films in story order cannot be one
+ * entry here, because one entry can only occupy one position. Loki is the clear
+ * case: season 1 opens the moment Endgame's time heist ends, then eight films
+ * pass before season 2 picks up the Kang thread that Quantumania sets running.
+ * Those shows are split into per-season titles in the catalog (`season` and
+ * `showId` on each), and each season is placed where it actually belongs.
  */
 export const MCU_CHRONOLOGY: readonly string[] = [
   // Ancient history through the Second World War
@@ -31,7 +39,10 @@ export const MCU_CHRONOLOGY: readonly string[] = [
   "thor-the-dark-world",
   "captain-america-the-winter-soldier",
   "guardians-of-the-galaxy",
-  "i-am-groot",
+  // Both seasons of the shorts are the same baby-Groot era, so they stay
+  // together -- split for tracking, not because films separate them.
+  "i-am-groot-season-1",
+  "i-am-groot-season-2",
   "guardians-of-the-galaxy-vol-2",
   "avengers-age-of-ultron",
   "ant-man",
@@ -46,8 +57,9 @@ export const MCU_CHRONOLOGY: readonly string[] = [
   "avengers-endgame",
 
   // The Multiverse Saga
-  "loki",
-  "what-if",
+  // Loki season 1 begins seconds after the Endgame time heist.
+  "loki-season-1",
+  "what-if-season-1",
   "marvel-zombies",
   "wandavision",
   "the-falcon-and-the-winter-soldier",
@@ -65,11 +77,16 @@ export const MCU_CHRONOLOGY: readonly string[] = [
   "black-panther-wakanda-forever",
   "guardians-of-the-galaxy-holiday-special",
   "ant-man-and-the-wasp-quantumania",
+  // ...and season 2 lands here, eight films later, taking up the Kang problem
+  // Quantumania leaves open.
+  "loki-season-2",
+  "what-if-season-2",
   "secret-invasion",
   "guardians-of-the-galaxy-vol-3",
   "echo",
   "daredevil-born-again",
   "the-marvels",
+  "what-if-season-3",
   "agatha-all-along",
   "your-friendly-neighborhood-spider-man",
   "ironheart",

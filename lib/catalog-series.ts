@@ -5,9 +5,13 @@ import type { Movie } from "@/lib/types";
  * share continuity with the films, Phase Four onward.
  *
  * ── Modelling ──────────────────────────────────────────────────────────────
- * One entry per *series*, not per season: Loki covers both its seasons and
- * What If...? all three. `runtime` is the total across every episode, so watch
- * time and the runtime sort behave the same for films and series alike.
+ * One entry per *season*, not per show, wherever the seasons are separated in
+ * story order -- Loki, What If...? and I Am Groot. A single entry can only hold
+ * one place on the chronological timeline, and Loki's two seasons are eighteen
+ * titles apart on it, so one entry would necessarily misplace half the show.
+ * Split entries carry `season` and a shared `showId`; everything else is one
+ * entry per series. `runtime` is the total across that entry's episodes, so
+ * watch time and the runtime sort behave the same for films and series alike.
  * Episode counts and totals are close approximations — episode lengths vary
  * within a season, so treat the watch-time figures as indicative, not exact.
  *
@@ -34,21 +38,52 @@ export const MCU_SERIES: Movie[] = [
     characters: ["captain-america"], villains: ["Flag Smashers", "John Walker", "Baron Zemo"],
   },
   {
-    id: "loki", kind: "series", title: "Loki", year: 2021, phase: 4,
-    releaseDate: "2021-06-09", director: "Michael Waldron", runtime: 600, seasons: 2, episodes: 12,
+    id: "loki-season-1", kind: "series", title: "Loki: Season 1", year: 2021, phase: 4,
+    season: 1, showId: "loki",
+    releaseDate: "2021-06-09", director: "Michael Waldron", runtime: 300, seasons: 1, episodes: 6,
     synopsis: "A stray Loki is conscripted by the Time Variance Authority to hunt a version of himself.",
-    initials: "LK", imdbId: "tt9140554", imdbRating: 8.2,
+    initials: "LK1", imdbId: "tt9140554", imdbRating: 8.2,
     universe: "mcu", studio: STUDIO, franchise: "Loki",
     characters: ["thor"], villains: ["He Who Remains", "Ravonna Renslayer"],
   },
   {
-    id: "what-if", kind: "series", title: "What If...?", year: 2021, phase: 4,
-    releaseDate: "2021-08-11", director: "A.C. Bradley", runtime: 800, seasons: 3, episodes: 26,
+    id: "loki-season-2", kind: "series", title: "Loki: Season 2", year: 2023, phase: 5,
+    season: 2, showId: "loki",
+    releaseDate: "2023-10-05", director: "Justin Benson", runtime: 300, seasons: 1, episodes: 6,
+    synopsis: "The TVA is coming apart around a Loki unstuck in time, and the throne at the end of it needs an occupant.",
+    initials: "LK2", imdbId: "tt9140554", imdbRating: 8.2,
+    universe: "mcu", studio: STUDIO, franchise: "Loki",
+    characters: ["thor"], villains: ["Victor Timely", "Ravonna Renslayer"],
+  },
+  {
+    id: "what-if-season-1", kind: "series", title: "What If...?: Season 1", year: 2021, phase: 4,
+    season: 1, showId: "what-if",
+    releaseDate: "2021-08-11", director: "A.C. Bradley", runtime: 290, seasons: 1, episodes: 9,
     synopsis: "The Watcher observes the branching realities where single moments of the MCU went differently.",
-    initials: "WI", imdbId: "tt10168312", imdbRating: 7.3,
+    initials: "WI1", imdbId: "tt10168312", imdbRating: 7.3,
     universe: "mcu", studio: STUDIO, franchise: "What If...?",
     characters: ["captain-america", "iron-man", "thor", "doctor-strange", "guardians"],
-    villains: ["Infinity Ultron", "Strange Supreme"],
+    villains: ["Infinity Ultron"],
+  },
+  {
+    id: "what-if-season-2", kind: "series", title: "What If...?: Season 2", year: 2023, phase: 5,
+    season: 2, showId: "what-if",
+    releaseDate: "2023-12-22", director: "A.C. Bradley", runtime: 280, seasons: 1, episodes: 9,
+    synopsis: "Nine more divergences, from a Kahhori who never met Spain to a Christmas the Avengers do not survive.",
+    initials: "WI2", imdbId: "tt10168312", imdbRating: 7.3,
+    universe: "mcu", studio: STUDIO, franchise: "What If...?",
+    characters: ["captain-america", "iron-man", "thor", "doctor-strange", "captain-marvel"],
+    villains: ["Strange Supreme"],
+  },
+  {
+    id: "what-if-season-3", kind: "series", title: "What If...?: Season 3", year: 2024, phase: 5,
+    season: 3, showId: "what-if",
+    releaseDate: "2024-12-22", director: "A.C. Bradley", runtime: 230, seasons: 1, episodes: 8,
+    synopsis: "The Watcher's last set of what-ifs, ending with a reckoning he cannot stay neutral through.",
+    initials: "WI3", imdbId: "tt10168312", imdbRating: 7.3,
+    universe: "mcu", studio: STUDIO, franchise: "What If...?",
+    characters: ["captain-america", "iron-man", "thor", "doctor-strange", "hulk"],
+    villains: ["Strange Supreme"],
   },
   {
     id: "hawkeye", kind: "series", title: "Hawkeye", year: 2021, phase: 4,
@@ -75,10 +110,20 @@ export const MCU_SERIES: Movie[] = [
     characters: ["captain-marvel"], villains: ["Clandestines", "Damage Control"],
   },
   {
-    id: "i-am-groot", kind: "series", title: "I Am Groot", year: 2022, phase: 4,
-    releaseDate: "2022-08-10", director: "Kirsten Lepore", runtime: 45, seasons: 2, episodes: 10,
+    id: "i-am-groot-season-1", kind: "series", title: "I Am Groot: Season 1", year: 2022, phase: 4,
+    season: 1, showId: "i-am-groot",
+    releaseDate: "2022-08-10", director: "Kirsten Lepore", runtime: 22, seasons: 1, episodes: 5,
     synopsis: "Baby Groot causes small, wordless catastrophes aboard and around the Milano.",
-    initials: "IAG", imdbId: "tt13623148", imdbRating: 6.7,
+    initials: "IG1", imdbId: "tt13623148", imdbRating: 6.7,
+    universe: "mcu", studio: STUDIO, franchise: "Guardians of the Galaxy",
+    characters: ["guardians"], villains: [],
+  },
+  {
+    id: "i-am-groot-season-2", kind: "series", title: "I Am Groot: Season 2", year: 2023, phase: 5,
+    season: 2, showId: "i-am-groot",
+    releaseDate: "2023-09-06", director: "Kirsten Lepore", runtime: 23, seasons: 1, episodes: 5,
+    synopsis: "Five more shorts of the galaxy's smallest menace, still refusing to say anything else.",
+    initials: "IG2", imdbId: "tt13623148", imdbRating: 6.7,
     universe: "mcu", studio: STUDIO, franchise: "Guardians of the Galaxy",
     characters: ["guardians"], villains: [],
   },

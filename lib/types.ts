@@ -63,10 +63,21 @@ export type Movie = {
   /** MCU only: 1-based position in in-universe chronological order. */
   chronoOrder?: number;
 
-  /** Series only: number of seasons released. */
+  /** Series only: number of seasons this entry covers (1 for a single season). */
   seasons?: number;
-  /** Series only: total episode count across all seasons. */
+  /** Series only: episode count for this entry. */
   episodes?: number;
+  /**
+   * Series only: which season this entry is.
+   *
+   * Shows whose seasons are separated by films in story order are split into
+   * one entry per season — Loki S1 lands right after Endgame, then eight films
+   * pass before S2. A single entry could only sit at one point on the timeline,
+   * which would be a lie about half of it.
+   */
+  season?: number;
+  /** Groups the seasons of one show together. */
+  showId?: string;
 
   characters: CharacterTag[];
   villains: string[];

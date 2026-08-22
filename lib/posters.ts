@@ -135,12 +135,18 @@ export const POSTER_PATHS: Readonly<Record<string, string>> = {
   // ── Marvel Studios series & specials (Disney+) ───────────────────────────
   wandavision: "/ijWWwINc8h71NQ8j1LTJMFSj5wr.jpg",
   "the-falcon-and-the-winter-soldier": "/6kbAMLteGO8yyewYau6bJ683sw7.jpg",
-  loki: "/kEl2t3OhXc3Zb9FBh1AuYzRTgZp.jpg",
-  "what-if": "/zaqfFDUrSfIljdD0OBxSjcutX8n.jpg",
+  // Split shows use TMDB's per-season art, not the show poster -- two identical
+  // tiles sitting at different points on the timeline would read as a bug.
+  "loki-season-1": "/8uVqe9ThcuYVNdh4O0kuijIWMLL.jpg",
+  "loki-season-2": "/oJdVHUYrjdS2IqiNztVIP4GPB1p.jpg",
+  "what-if-season-1": "/lztz5XBMG1x6Y5ubz7CxfPFsAcW.jpg",
+  "what-if-season-2": "/3yhoq5LVMgKy9rEriH6ytq9BoJV.jpg",
+  "what-if-season-3": "/bbGeKXKoualYRYqvFYiv8fPZK0d.jpg",
   hawkeye: "/ct5pNE5dDHryHLDnxyZPYcqO1sz.jpg",
   "moon-knight": "/x6FsYvt33846IQnDSFxla9j0RX8.jpg",
   "ms-marvel": "/3HWWh92kZbD7odwJX7nKmXNZsYo.jpg",
-  "i-am-groot": "/3QfQYECgu6DX5UUWCBvv1Fl0BAJ.jpg",
+  "i-am-groot-season-1": "/oZmqHnWJVQLOKOibDa34W4iGBZU.jpg",
+  "i-am-groot-season-2": "/7b4qBnExIjuANVDKWyVN8gVVOXS.jpg",
   "she-hulk-attorney-at-law": "/5xz2orV8f0usyrfGNshcoXHmiaV.jpg",
   "werewolf-by-night": "/mvIvNKRIJPPS7WSFarFhOAGIVnU.jpg",
   "guardians-of-the-galaxy-holiday-special": "/8dqXyslZ2hv49Oiob9UjlGSHSTR.jpg",
