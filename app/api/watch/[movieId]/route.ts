@@ -8,7 +8,7 @@ import { getWatchAvailability, watchProvidersConfigured } from "@/lib/watch-prov
  *
  * A route handler rather than server-rendering it into the page: availability
  * is only needed once someone opens a title's details, and pre-fetching it for
- * all 114 would be 114 TMDB calls per page load to answer a question nobody
+ * all 131 would be 131 TMDB calls per page load to answer a question nobody
  * asked. The modal fetches this when it opens; Redis absorbs the repeats.
  *
  * The region defaults to the caller's geo-IP country and can be overridden with
