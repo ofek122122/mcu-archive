@@ -4,7 +4,7 @@ import { Anton, Barlow, JetBrains_Mono } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { dark } from "@clerk/themes";
 
-import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
+import { GOOGLE_SITE_VERIFICATION, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 import { ParallaxBackdrop } from "@/components/parallax-backdrop";
 
 import "./globals.css";
@@ -55,12 +55,7 @@ export const metadata: Metadata = {
     title: TITLE,
     description: SITE_DESCRIPTION,
   },
-  // Set GOOGLE_SITE_VERIFICATION in Vercel to the token Search Console gives
-  // you; the meta tag then appears on every page. Left out entirely when unset,
-  // rather than emitting an empty tag that fails verification confusingly.
-  verification: process.env.GOOGLE_SITE_VERIFICATION
-    ? { google: process.env.GOOGLE_SITE_VERIFICATION }
-    : undefined,
+  verification: { google: GOOGLE_SITE_VERIFICATION },
 };
 
 export const viewport: Viewport = {
