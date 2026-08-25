@@ -171,8 +171,9 @@ components/
   pin-input.tsx          Four auto-advancing digit boxes (claim flow only)
   tracker.tsx            Views, filters, URL sync, grouping, batch actions
   progress-header.tsx    View nav, progress meter, Infinity Roulette
-  filter-bar.tsx         Search, status, studios, phases, sort, density
-  hero-rail.tsx          Quick-select character pills
+  filter-bar.tsx         Search, the order toggle, and the active-filter chips
+  filter-panel.tsx       Type, status, phase/studio, character, sort, density
+  filter-options.ts      The filter vocabulary both of those share
   movie-card.tsx         Glass card, 3D tilt, poster, watched toggle
   compact-list.tsx       High-density checklist mode
   movie-modal.tsx        Full metadata panel
@@ -404,10 +405,22 @@ Netflix ones were later pulled in explicitly, with Charlie Cox and Vincent D'Ono
 straight into *She-Hulk*, *Echo* and *Born Again*. Rather than rule on it, they are visible in
 All Marvel, excluded from the MCU Timeline, and filterable on their own.
 
-**Filtering** stacks: a character pill, a text search across titles / heroes / villains /
-directors / studios, a studio multi-select, watched status, and six sort orders. Chapters
-collapse to a flat result list whenever a search or character filter is active, since
-grouping fragments results.
+**Filtering** stacks: a text search across titles / heroes / villains / directors / studios,
+a character, a studio multi-select or an MCU phase, watched status, and six sort orders.
+Chapters collapse to a flat result list whenever a search or character filter is active,
+since grouping fragments results.
+
+The bar itself holds only the search and the release/story toggle. Everything else lives one
+click away in a filter panel — a dropdown on a desktop, a bottom sheet on a phone — where
+each group carries a text label. Out in the bar those nine groups filled four stacked rows
+and five on a phone, and none of them said what it was; "Everything / Movies / Series" only
+reads as a *type* filter once you already know. Together with the header that was a quarter
+to a third of the screen before a single poster, and the squeeze landed on the search box,
+which was narrower at 1024px than on a phone. It is now one 54px row from 768px up, and the
+search runs 968px wide at 1440px against 385px before.
+
+Nothing filters invisibly: whatever is switched on appears as a removable chip under the bar,
+and the Filters button carries a count.
 
 **Batch actions** appear on every chapter header ("Mark all watched") and above flat result
 lists, writing through one variadic `SADD`/`SREM` rather than N round trips.

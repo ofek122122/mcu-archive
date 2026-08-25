@@ -1,44 +1,35 @@
 "use client";
 
-import { ArrowDownUp, Clapperboard, Eye, EyeOff, LayoutGrid, Layers, List, Search, Tv, X } from "lucide-react";
+import { useState } from "react";
+import { Search, SlidersHorizontal, X } from "lucide-react";
 
-import { PHASES, UNIVERSES } from "@/lib/universes";
-import type { PhaseId, UniverseId } from "@/lib/types";
+import { HERO_BY_ID } from "@/lib/heroes";
+import { getPhase, UNIVERSE_BY_ID } from "@/lib/universes";
+import type { HeroId, PhaseId, UniverseId } from "@/lib/types";
+import { FilterPanel } from "@/components/filter-panel";
+import { KIND_OPTIONS, STATUS_OPTIONS } from "@/components/filter-options";
+import type {
+  KindFilter,
+  PhaseFilter,
+  SortKey,
+  StatusFilter,
+  TimelineOrder,
+  ViewMode,
+} from "@/components/filter-options";
 
-export type StatusFilter = "all" | "watched" | "unwatched";
-/** Films, series, or both. Excluding series removes them from counts too. */
-export type KindFilter = "all" | "movie" | "series";
-export type PhaseFilter = PhaseId | "all";
-export type ViewMode = "posters" | "compact";
-export type TimelineOrder = "release" | "chrono";
-export type SortKey =
-  | "release-desc"
-  | "release-asc"
-  | "rating-desc"
-  | "rating-asc"
-  | "runtime-desc"
-  | "title-asc";
-
-export const SORT_OPTIONS: { value: SortKey; label: string }[] = [
-  { value: "release-asc", label: "Release — oldest" },
-  { value: "release-desc", label: "Release — newest" },
-  { value: "rating-desc", label: "IMDb — highest" },
-  { value: "rating-asc", label: "IMDb — lowest" },
-  { value: "runtime-desc", label: "Runtime — longest" },
-  { value: "title-asc", label: "Title — A to Z" },
-];
-
-const STATUS_OPTIONS: { value: StatusFilter; label: string; icon: typeof Eye }[] = [
-  { value: "all", label: "All", icon: Layers },
-  { value: "watched", label: "Watched", icon: Eye },
-  { value: "unwatched", label: "Unwatched", icon: EyeOff },
-];
-
-const KIND_OPTIONS: { value: KindFilter; label: string; icon: typeof Eye }[] = [
-  { value: "all", label: "Everything", icon: Layers },
-  { value: "movie", label: "Movies", icon: Clapperboard },
-  { value: "series", label: "Series", icon: Tv },
-];
+export {
+  SORT_OPTIONS,
+  STATUS_OPTIONS,
+  KIND_OPTIONS,
+} from "@/components/filter-options";
+export type {
+  KindFilter,
+  PhaseFilter,
+  SortKey,
+  StatusFilter,
+  TimelineOrder,
+  ViewMode,
+} from "@/components/filter-options";
 
 type FilterBarProps = {
   isMcuView: boolean;
@@ -52,6 +43,9 @@ type FilterBarProps = {
   onUniversesChange: (universes: UniverseId[]) => void;
   phase: PhaseFilter;
   onPhaseChange: (phase: PhaseFilter) => void;
+  hero: HeroId | null;
+  onHeroChange: (hero: HeroId | null) => void;
+  heroCounts: Record<string, number>;
   order: TimelineOrder;
   onOrderChange: (order: TimelineOrder) => void;
   sort: SortKey;
@@ -61,6 +55,19 @@ type FilterBarProps = {
   resultCount: number;
 };
 
+/** One active filter, rendered as a chip you can switch off. */
+type ActiveFilter = { key: string; label: string; accent: string; clear: () => void };
+
+/**
+ * Search, the release/story toggle, and a door to everything else.
+ *
+ * The bar used to carry all nine control groups at once — four stacked rows at
+ * most widths, five on a phone, and a hero rail under them. Together with the
+ * header that was a quarter to a third of the screen before a single poster,
+ * and the squeeze fell on the search box, which was *narrower* at 1024px than
+ * on a phone. The rest now lives in `FilterPanel`, with what is switched on
+ * shown as chips here so nothing filters invisibly.
+ */
 export function FilterBar({
   isMcuView,
   kind,
@@ -73,6 +80,9 @@ export function FilterBar({
   onUniversesChange,
   phase,
   onPhaseChange,
+  hero,
+  onHeroChange,
+  heroCounts,
   order,
   onOrderChange,
   sort,
@@ -81,26 +91,62 @@ export function FilterBar({
   onModeChange,
   resultCount,
 }: FilterBarProps) {
-  function toggleUniverse(id: UniverseId) {
-    onUniversesChange(
-      universes.includes(id) ? universes.filter((u) => u !== id) : [...universes, id],
-    );
+  const [open, setOpen] = useState(false);
+
+  // Sort and density are not filters — they change how the same set is shown,
+  // so they stay out of the count and out of the chips.
+  const active: ActiveFilter[] = [];
+
+  if (kind !== "all") {
+    const option = KIND_OPTIONS.find((item) => item.value === kind);
+    active.push({ key: "kind", label: option?.label ?? kind, accent: "#5ad2f4", clear: () => onKindChange("all") });
+  }
+
+  if (status !== "all") {
+    const option = STATUS_OPTIONS.find((item) => item.value === status);
+    active.push({ key: "status", label: option?.label ?? status, accent: "#edebe6", clear: () => onStatusChange("all") });
+  }
+
+  if (isMcuView && phase !== "all") {
+    const item = getPhase(phase as PhaseId);
+    active.push({ key: "phase", label: `Phase ${item.roman}`, accent: item.accent, clear: () => onPhaseChange("all") });
+  }
+
+  if (!isMcuView) {
+    for (const id of universes) {
+      const universe = UNIVERSE_BY_ID.get(id);
+      active.push({
+        key: `studio-${id}`,
+        label: universe?.label ?? id,
+        accent: universe?.accent ?? "#edebe6",
+        clear: () => onUniversesChange(universes.filter((u) => u !== id)),
+      });
+    }
+  }
+
+  if (hero) {
+    const item = HERO_BY_ID.get(hero);
+    active.push({ key: "hero", label: item?.label ?? hero, accent: item?.accent ?? "#edebe6", clear: () => onHeroChange(null) });
+  }
+
+  function reset() {
+    onKindChange("all");
+    onStatusChange("all");
+    onPhaseChange("all");
+    onUniversesChange([]);
+    onHeroChange(null);
   }
 
   return (
     <div className="glass border-b border-white/8">
-      <div className="mx-auto flex max-w-[1500px] flex-col gap-2.5 px-4 py-2.5 sm:px-6">
+      <div className="mx-auto flex max-w-[1500px] flex-col gap-2 px-4 py-2.5 sm:px-6">
         {/*
-          Row 1 — search, then the control groups.
-
-          On a phone the search takes a row of its own and the groups sit in a
-          scrolling strip below it, the same pattern row 2 already uses. That
-          strip is what pays for the labels: these used to collapse to bare
-          icons on small screens, where three near-identical glyphs said
-          nothing about what they filtered.
+          DOM order puts the count straight after the search so a phone wraps to
+          two rows — search + count, then the toggle + Filters — instead of
+          three. Above sm it is sent to the end, where it has always sat.
         */}
-        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-          <div className="relative w-full sm:min-w-[180px] sm:flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative min-w-[180px] flex-1">
             <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-mist/60" />
             <input
               type="search"
@@ -122,217 +168,120 @@ export function FilterBar({
             ) : null}
           </div>
 
-          <div className="no-scrollbar -mx-1 flex items-center gap-2 overflow-x-auto px-1 sm:contents">
-          {/* Films vs series — excluding one drops it from progress counts too */}
-          <div
-            role="group"
-            aria-label="Filter by type"
-            className="flex shrink-0 items-center gap-0.5 rounded-lg border border-white/10 bg-void/50 p-0.5 backdrop-blur-md"
-          >
-            {KIND_OPTIONS.map((option) => {
-              const Icon = option.icon;
-              const active = kind === option.value;
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  aria-pressed={active}
-                  title={option.label}
-                  onClick={() => onKindChange(option.value)}
-                  className={`flex cursor-pointer items-center gap-1.5 rounded-md px-2.5 py-1.5 font-mono text-[10px] tracking-brand uppercase transition-colors ${
-                    active ? "bg-arc text-void" : "text-mist hover:text-bone"
-                  }`}
-                >
-                  <Icon className="size-3" />
-                  {option.label}
-                </button>
-              );
-            })}
-          </div>
-
-          <div
-            role="group"
-            aria-label="Filter by status"
-            className="flex shrink-0 items-center gap-0.5 rounded-lg border border-white/10 bg-void/50 p-0.5 backdrop-blur-md"
-          >
-            {STATUS_OPTIONS.map((option) => {
-              const Icon = option.icon;
-              const active = status === option.value;
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  aria-pressed={active}
-                  onClick={() => onStatusChange(option.value)}
-                  className={`flex cursor-pointer items-center gap-1.5 rounded-md px-2.5 py-1.5 font-mono text-[10px] tracking-brand uppercase transition-colors ${
-                    active ? "bg-bone text-void" : "text-mist hover:text-bone"
-                  }`}
-                >
-                  <Icon className="size-3" />
-                  {option.label}
-                </button>
-              );
-            })}
-          </div>
-
-          <label className="flex shrink-0 items-center gap-1.5 rounded-lg border border-white/10 bg-void/50 px-2 py-1.5 backdrop-blur-md">
-            <ArrowDownUp className="size-3 text-mist" />
-            <span className="sr-only">Sort by</span>
-            <select
-              value={sort}
-              onChange={(event) => onSortChange(event.target.value as SortKey)}
-              className="cursor-pointer bg-transparent font-mono text-[10px] tracking-wider text-bone uppercase focus:outline-none"
-            >
-              {SORT_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value} className="bg-panel text-bone">
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <div
-            role="group"
-            aria-label="View density"
-            className="flex shrink-0 items-center gap-0.5 rounded-lg border border-white/10 bg-void/50 p-0.5 backdrop-blur-md"
-          >
-            <button
-              type="button"
-              aria-pressed={mode === "posters"}
-              onClick={() => onModeChange("posters")}
-              className={`flex cursor-pointer items-center gap-1.5 rounded-md px-2.5 py-1.5 font-mono text-[10px] tracking-brand uppercase transition-colors ${
-                mode === "posters" ? "bg-bone text-void" : "text-mist hover:text-bone"
-              }`}
-            >
-              <LayoutGrid className="size-3" />
-              Posters
-            </button>
-            <button
-              type="button"
-              aria-pressed={mode === "compact"}
-              onClick={() => onModeChange("compact")}
-              className={`flex cursor-pointer items-center gap-1.5 rounded-md px-2.5 py-1.5 font-mono text-[10px] tracking-brand uppercase transition-colors ${
-                mode === "compact" ? "bg-bone text-void" : "text-mist hover:text-bone"
-              }`}
-            >
-              <List className="size-3" />
-              List
-            </button>
-          </div>
-
           <span
             aria-live="polite"
-            className="shrink-0 font-mono text-[10px] tracking-brand text-mist uppercase"
+            className="shrink-0 font-mono text-[10px] tracking-brand text-mist uppercase sm:order-last sm:ml-auto"
           >
-            {resultCount} {resultCount === 1 ? "film" : "films"}
+            {resultCount} {resultCount === 1 ? "title" : "titles"}
           </span>
+
+          {/* The one filter that is also the point of the app stays in the bar. */}
+          {isMcuView ? (
+            <div
+              role="group"
+              aria-label="Timeline order"
+              className="flex shrink-0 items-center gap-0.5 rounded-lg border border-white/10 bg-void/50 p-0.5 backdrop-blur-md"
+            >
+              <button
+                type="button"
+                aria-pressed={order === "release"}
+                onClick={() => onOrderChange("release")}
+                className={`cursor-pointer rounded-md px-2.5 py-1.5 font-mono text-[10px] tracking-brand whitespace-nowrap uppercase transition-colors ${
+                  order === "release" ? "bg-bone text-void" : "text-mist hover:text-bone"
+                }`}
+              >
+                Release order
+              </button>
+              <button
+                type="button"
+                aria-pressed={order === "chrono"}
+                onClick={() => onOrderChange("chrono")}
+                className={`cursor-pointer rounded-md px-2.5 py-1.5 font-mono text-[10px] tracking-brand whitespace-nowrap uppercase transition-colors ${
+                  order === "chrono" ? "bg-bone text-void" : "text-mist hover:text-bone"
+                }`}
+              >
+                Story order
+              </button>
+            </div>
+          ) : null}
+
+          <div className="relative shrink-0">
+            <button
+              type="button"
+              aria-expanded={open}
+              aria-haspopup="dialog"
+              onClick={() => setOpen((was) => !was)}
+              className={`flex cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 py-1.5 font-mono text-[10px] tracking-brand uppercase transition-colors ${
+                open || active.length > 0
+                  ? "border-arc/60 bg-arc/10 text-arc"
+                  : "border-white/10 bg-void/50 text-mist hover:border-white/30 hover:text-bone"
+              }`}
+            >
+              <SlidersHorizontal className="size-3" />
+              Filters
+              {active.length > 0 ? (
+                <span className="flex size-4 items-center justify-center rounded-full bg-arc text-[9px] font-bold text-void">
+                  {active.length}
+                </span>
+              ) : null}
+            </button>
+
+            {open ? (
+              <FilterPanel
+                isMcuView={isMcuView}
+                kind={kind}
+                onKindChange={onKindChange}
+                status={status}
+                onStatusChange={onStatusChange}
+                universes={universes}
+                onUniversesChange={onUniversesChange}
+                phase={phase}
+                onPhaseChange={onPhaseChange}
+                hero={hero}
+                onHeroChange={onHeroChange}
+                heroCounts={heroCounts}
+                sort={sort}
+                onSortChange={onSortChange}
+                mode={mode}
+                onModeChange={onModeChange}
+                activeCount={active.length}
+                onReset={reset}
+                onClose={() => setOpen(false)}
+              />
+            ) : null}
           </div>
         </div>
 
-        {/* Row 2 — universe multi-select, or MCU phase + order controls */}
-        <div className="no-scrollbar -mx-1 flex items-center gap-1.5 overflow-x-auto px-1">
-          {isMcuView ? (
-            <>
-              <div className="flex shrink-0 items-center gap-0.5 rounded-lg border border-white/10 bg-void/50 p-0.5 backdrop-blur-md">
-                <button
-                  type="button"
-                  aria-pressed={order === "release"}
-                  onClick={() => onOrderChange("release")}
-                  className={`cursor-pointer rounded-md px-2.5 py-1.5 font-mono text-[10px] tracking-brand whitespace-nowrap uppercase transition-colors ${
-                    order === "release" ? "bg-bone text-void" : "text-mist hover:text-bone"
-                  }`}
-                >
-                  Release order
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={order === "chrono"}
-                  onClick={() => onOrderChange("chrono")}
-                  className={`cursor-pointer rounded-md px-2.5 py-1.5 font-mono text-[10px] tracking-brand whitespace-nowrap uppercase transition-colors ${
-                    order === "chrono" ? "bg-bone text-void" : "text-mist hover:text-bone"
-                  }`}
-                >
-                  Story order
-                </button>
-              </div>
-
-              <span className="shrink-0 px-1 text-white/15">|</span>
-
-              <Chip active={phase === "all"} accent="#edebe6" onClick={() => onPhaseChange("all")}>
-                All phases
-              </Chip>
-              {PHASES.map((item) => (
-                <Chip
-                  key={item.id}
-                  active={phase === item.id}
-                  accent={item.accent}
-                  onClick={() => onPhaseChange(item.id)}
-                >
-                  Phase {item.roman}
-                </Chip>
-              ))}
-            </>
-          ) : (
-            <>
-              <span className="shrink-0 pr-1 font-mono text-[9px] tracking-brand text-mist/60 uppercase">
-                Studios
-              </span>
-              <Chip
-                active={universes.length === 0}
-                accent="#edebe6"
-                onClick={() => onUniversesChange([])}
+        {active.length > 0 ? (
+          <div className="no-scrollbar -mx-1 flex items-center gap-1.5 overflow-x-auto px-1">
+            {active.map((filter) => (
+              <button
+                key={filter.key}
+                type="button"
+                onClick={filter.clear}
+                aria-label={`Remove filter: ${filter.label}`}
+                style={{
+                  backgroundColor: `${filter.accent}1f`,
+                  borderColor: `${filter.accent}99`,
+                  color: filter.accent,
+                }}
+                className="group flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[10px] tracking-brand whitespace-nowrap uppercase transition-all hover:brightness-125"
               >
-                All studios
-              </Chip>
-              {UNIVERSES.map((universe) => (
-                <Chip
-                  key={universe.id}
-                  active={universes.includes(universe.id)}
-                  accent={universe.accent}
-                  onClick={() => toggleUniverse(universe.id)}
-                >
-                  {universe.label}
-                </Chip>
-              ))}
-            </>
-          )}
-        </div>
+                {filter.label}
+                <X className="size-3 opacity-60 transition-opacity group-hover:opacity-100" />
+              </button>
+            ))}
+
+            <button
+              type="button"
+              onClick={reset}
+              className="flex shrink-0 cursor-pointer items-center gap-1 rounded-full border border-white/10 px-2.5 py-1 font-mono text-[10px] tracking-brand text-mist uppercase transition-colors hover:border-marvel/60 hover:text-marvel"
+            >
+              Clear all
+            </button>
+          </div>
+        ) : null}
       </div>
     </div>
-  );
-}
-
-function Chip({
-  active,
-  accent,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  accent: string;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={active}
-      onClick={onClick}
-      style={
-        active
-          ? {
-              backgroundColor: `${accent}1f`,
-              borderColor: accent,
-              color: accent,
-              boxShadow: `0 0 18px ${accent}44`,
-            }
-          : undefined
-      }
-      className={`shrink-0 cursor-pointer rounded-lg border px-3 py-1.5 font-mono text-[10px] tracking-brand whitespace-nowrap uppercase transition-all ${
-        active ? "" : "border-white/10 text-mist hover:border-white/30 hover:text-bone"
-      }`}
-    >
-      {children}
-    </button>
   );
 }

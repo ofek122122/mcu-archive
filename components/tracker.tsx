@@ -39,7 +39,6 @@ import {
   type ViewMode,
 } from "@/components/filter-bar";
 import { CompactList } from "@/components/compact-list";
-import { HeroRail } from "@/components/hero-rail";
 import { MovieCard } from "@/components/movie-card";
 import { MovieModal } from "@/components/movie-modal";
 import { ProgressHeader, type ViewId } from "@/components/progress-header";
@@ -399,44 +398,31 @@ export function Tracker({
         />
 
         {view !== "stats" ? (
-          <>
-            <FilterBar
-              isMcuView={view === "mcu"}
-              kind={kind}
-              onKindChange={setKind}
-              query={query}
-              onQueryChange={setQuery}
-              status={status}
-              onStatusChange={setStatus}
-              universes={universes}
-              onUniversesChange={setUniverses}
-              phase={phaseFilter}
-              onPhaseChange={setPhaseFilter}
-              order={order}
-              onOrderChange={setOrder}
-              sort={sort}
-              onSortChange={setSort}
-              mode={mode}
-              onModeChange={setMode}
-              resultCount={visible.length}
-            />
-          </>
+          <FilterBar
+            isMcuView={view === "mcu"}
+            kind={kind}
+            onKindChange={setKind}
+            query={query}
+            onQueryChange={setQuery}
+            status={status}
+            onStatusChange={setStatus}
+            universes={universes}
+            onUniversesChange={setUniverses}
+            phase={phaseFilter}
+            onPhaseChange={setPhaseFilter}
+            hero={hero}
+            onHeroChange={setHero}
+            heroCounts={heroCounts}
+            order={order}
+            onOrderChange={setOrder}
+            sort={sort}
+            onSortChange={setSort}
+            mode={mode}
+            onModeChange={setMode}
+            resultCount={visible.length}
+          />
         ) : null}
       </div>
-
-      {/*
-        The hero rail scrolls away rather than sticking. Header plus filters
-        plus rail pinned together took more than half a phone screen before a
-        single poster appeared, and of the three the rail is the one you set
-        once and stop looking at.
-      */}
-      {view !== "stats" ? (
-        <div className="glass border-b border-white/8">
-          <div className="mx-auto max-w-[1500px] px-4 py-1.5 sm:px-6">
-            <HeroRail active={hero} counts={heroCounts} onChange={setHero} />
-          </div>
-        </div>
-      ) : null}
 
       <main className="relative mx-auto max-w-[1500px] px-4 pt-6 pb-28 sm:pt-8 sm:px-6">
         {signedIn ? <ClaimLegacy profiles={legacyProfiles} /> : <GuestBanner count={guestWatched.length} />}
