@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { Calendar, Check, Clapperboard, Clock3, ExternalLink, Plus, Tv, X } from "lucide-react";
 
 import { imdbUrl } from "@/lib/movies";
+import { useScrollLock } from "@/lib/use-scroll-lock";
 import type { Theme, TrackedMovie } from "@/lib/types";
 import { ImdbBadge } from "@/components/imdb-badge";
 import { WatchProviders } from "@/components/watch-providers";
@@ -35,16 +36,15 @@ export function MovieModal({ movie, theme, region, watched, onToggle, onClose }:
       if (event.key === "Escape") onClose();
     };
 
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
     window.addEventListener("keydown", onKeyDown);
     closeRef.current?.focus();
 
     return () => {
-      document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [onClose]);
+
+  useScrollLock();
 
   const showArt = Boolean(movie.posterUrl) && !artFailed;
   const isSeries = movie.kind === "series";

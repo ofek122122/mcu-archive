@@ -420,7 +420,11 @@ which was narrower at 1024px than on a phone. It is now one 54px row from 768px 
 search runs 968px wide at 1440px against 385px before.
 
 Nothing filters invisibly: whatever is switched on appears as a removable chip under the bar,
-and the Filters button carries a count.
+and the Filters button carries a count. As a sheet it covers that bar, count included, so it
+carries its own — a pinned "Show N titles" that updates as you pick and doubles as the way
+out. Overlays lock the page behind them through `lib/use-scroll-lock.ts`, which holds `<html>`
+as well as `<body>`; the scrolling element here is the root, so locking `<body>` alone does
+nothing and the list used to scroll away underneath every modal in the app.
 
 **Batch actions** appear on every chapter header ("Mark all watched") and above flat result
 lists, writing through one variadic `SADD`/`SREM` rather than N round trips.

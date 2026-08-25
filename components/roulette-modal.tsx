@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { Check, Dices, ExternalLink, X } from "lucide-react";
 
 import { imdbUrl, themeFor } from "@/lib/movies";
+import { useScrollLock } from "@/lib/use-scroll-lock";
 import type { TrackedMovie } from "@/lib/types";
 import { ImdbBadge } from "@/components/imdb-badge";
 
@@ -42,15 +43,14 @@ export function RouletteModal({
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
     };
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
     window.addEventListener("keydown", onKeyDown);
     closeRef.current?.focus();
     return () => {
-      document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [onClose]);
+
+  useScrollLock();
 
   return (
     <div

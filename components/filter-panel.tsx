@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { RotateCcw, X } from "lucide-react";
+import { useEffect, useRef, type RefObject } from "react";
+import { Check, RotateCcw, X } from "lucide-react";
 
 import { HEROES } from "@/lib/heroes";
+import { useScrollLock } from "@/lib/use-scroll-lock";
 import { PHASES, UNIVERSES } from "@/lib/universes";
 import type { HeroId, PhaseId, UniverseId } from "@/lib/types";
 import { KIND_OPTIONS, SORT_OPTIONS, STATUS_OPTIONS } from "@/components/filter-options";
@@ -27,6 +28,10 @@ type FilterPanelProps = {
   mode: ViewMode;
   onModeChange: (mode: ViewMode) => void;
   activeCount: number;
+  /** Live count of what the current filters leave — the sheet hides the one in the bar. */
+  resultCount: number;
+  /** The button that opened this, so its own click can still toggle it shut. */
+  triggerRef: RefObject<HTMLButtonElement | null>;
   onReset: () => void;
   onClose: () => void;
 };
@@ -61,6 +66,8 @@ export function FilterPanel({
   mode,
   onModeChange,
   activeCount,
+  resultCount,
+  triggerRef,
   onReset,
   onClose,
 }: FilterPanelProps) {
@@ -71,12 +78,14 @@ export function FilterPanel({
       if (event.key === "Escape") onClose();
     };
 
-    // A pointerdown outside closes. Listening on pointerdown rather than click
-    // means the toggle button's own click still fires afterwards, so tapping it
-    // a second time closes rather than close-then-reopening.
     const onPointerDown = (event: PointerEvent) => {
-      const node = panelRef.current;
-      if (node && !node.contains(event.target as Node)) onClose();
+      const target = event.target as Node;
+
+      // The trigger is exempt. Closing here would be undone a moment later by
+      // its own click handler toggling the panel straight back open, which is
+      // exactly what used to make the Filters button unable to close this.
+      if (triggerRef.current?.contains(target)) return;
+      if (panelRef.current && !panelRef.current.contains(target)) onClose();
     };
 
     window.addEventListener("keydown", onKeyDown);
@@ -85,7 +94,10 @@ export function FilterPanel({
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("pointerdown", onPointerDown);
     };
-  }, [onClose]);
+  }, [onClose, triggerRef]);
+
+  // Only as a bottom sheet, where it covers the page — see the hook.
+  useScrollLock("(max-width: 639px)");
 
   function toggleUniverse(id: UniverseId) {
     onUniversesChange(
@@ -158,7 +170,7 @@ export function FilterPanel({
           </button>
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-5">
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain p-4 sm:p-5">
           <Row label="Type">
             {KIND_OPTIONS.map((option) => (
               <Option
@@ -278,6 +290,22 @@ export function FilterPanel({
               List
             </Option>
           </Row>
+        </div>
+
+        {/*
+          The sheet covers the bar on a phone, count included, so picking a
+          filter used to change a number you could not see. This says what the
+          current selection leaves and is also the obvious way out.
+        */}
+        <div className="shrink-0 border-t border-white/8 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-5 sm:py-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-arc/50 bg-arc/12 px-4 py-2.5 font-display text-sm tracking-widest text-arc uppercase transition-colors hover:bg-arc/20"
+          >
+            <Check className="size-4" strokeWidth={3} />
+            Show {resultCount} {resultCount === 1 ? "title" : "titles"}
+          </button>
         </div>
       </div>
       </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 
 import { HERO_BY_ID } from "@/lib/heroes";
@@ -92,6 +92,7 @@ export function FilterBar({
   resultCount,
 }: FilterBarProps) {
   const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   // Sort and density are not filters — they change how the same set is shown,
   // so they stay out of the count and out of the chips.
@@ -207,6 +208,7 @@ export function FilterBar({
 
           <div className="relative shrink-0">
             <button
+              ref={triggerRef}
               type="button"
               aria-expanded={open}
               aria-haspopup="dialog"
@@ -245,6 +247,8 @@ export function FilterBar({
                 mode={mode}
                 onModeChange={onModeChange}
                 activeCount={active.length}
+                resultCount={resultCount}
+                triggerRef={triggerRef}
                 onReset={reset}
                 onClose={() => setOpen(false)}
               />
