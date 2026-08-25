@@ -358,6 +358,15 @@ load, so there is one place to reorder. Placement past *Endgame* is genuinely co
 series span months of story time and several overlap — so that file follows Marvel's own
 published timeline where one exists and makes a judgement call where it does not.
 
+Release order is chaptered by phase; **story order is chaptered by era**, because phases
+cannot chapter it. A phase is a release-order bucket, and sorting by story shuffles them: the
+phase number changes 19 times across the 64 titles, and Phase Four comes round five separate
+times. So story order gets six narrative chapters instead — *Before the Age of Heroes*, *The
+Age of Heroes*, *After New York*, *The Accords and the Snap*, *After the Blip*, *The
+Multiverse Unravels* — each defined by the title that opens it, so reordering the chronology
+re-chapters the timeline on its own. The phase still shows, as a tag on every card, which is
+where it reads correctly: per title, not per stretch of timeline.
+
 ### Films and series
 
 Series are modelled **one entry per season**, for two different reasons.

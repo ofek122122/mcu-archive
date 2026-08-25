@@ -13,6 +13,12 @@ type MovieCardProps = {
   theme: Theme;
   /** 1-based position in the full chronological slate. */
   order: number;
+  /**
+   * Short phase marker ("P4"), shown only where the surrounding list is not
+   * already grouped by phase — story order, chiefly, where the phases
+   * interleave and the card is the only place the phase can be read.
+   */
+  phaseTag?: string;
   watched: boolean;
   /** Stagger index for the load-in animation. */
   delay: number;
@@ -28,6 +34,7 @@ export function MovieCard({
   movie,
   theme,
   order,
+  phaseTag,
   watched,
   delay,
   priority = false,
@@ -162,6 +169,12 @@ export function MovieCard({
           <span className="pointer-events-none absolute top-2 left-2 z-20 flex items-center gap-1 rounded-[3px] bg-void/70 px-1.5 py-0.5 font-mono text-[10px] font-medium text-bone/85 backdrop-blur-sm">
             {isSeries ? <Tv className="size-2.5" style={{ color: theme.accent }} /> : null}
             {String(order).padStart(2, "0")}
+            {phaseTag ? (
+              <>
+                <span className="text-bone/35">·</span>
+                <span style={{ color: theme.accent }}>{phaseTag}</span>
+              </>
+            ) : null}
           </span>
 
           {/* IMDb badge — an external link in its own right */}

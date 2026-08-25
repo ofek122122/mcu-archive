@@ -121,3 +121,25 @@ export function themeFor(movie: Pick<Movie, "universe" | "phase" | "franchise">)
   }
   return FRANCHISE_THEMES[movie.franchise] ?? FALLBACK_THEME;
 }
+
+/**
+ * Colour stories for the story-order eras (see lib/chronology.ts).
+ *
+ * Deliberately cooler and less saturated than the phase palette: in that view
+ * the chapter is structure and the phase tag on each card is the thing to read,
+ * so era chrome that shouted in phase colours would fight it. They run cool to
+ * warm across the timeline, the way the story does.
+ */
+const ERA_THEMES: Record<string, Theme> = {
+  before: { key: "era-before", label: "Before the Age of Heroes", short: "PRE", accent: "#b8873f", secondary: "#8a6d3f", deep: "#1d1305" },
+  rise: { key: "era-rise", label: "The Age of Heroes", short: "RISE", accent: "#4f9fd6", secondary: "#8ea3b5", deep: "#08192a" },
+  "after-new-york": { key: "era-after-new-york", label: "After New York", short: "NY", accent: "#38b2a3", secondary: "#7fbfb5", deep: "#06211e" },
+  accords: { key: "era-accords", label: "The Accords and the Snap", short: "SNAP", accent: "#8f6fd6", secondary: "#d4af4e", deep: "#170c33" },
+  blip: { key: "era-blip", label: "After the Blip", short: "BLIP", accent: "#e06a45", secondary: "#f0b45a", deep: "#2a1006" },
+  multiverse: { key: "era-multiverse", label: "The Multiverse Unravels", short: "WAR", accent: "#d63a5c", secondary: "#e0559c", deep: "#300a1a" },
+};
+
+/** The colour story for a story-order era, by its key. */
+export function eraTheme(key: string): Theme {
+  return ERA_THEMES[key] ?? FALLBACK_THEME;
+}

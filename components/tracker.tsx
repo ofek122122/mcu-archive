@@ -24,9 +24,10 @@ import {
   subscribeGuestWatched,
   writeGuestWatched,
 } from "@/lib/guest-store";
+import { CHRONO_ERAS, ERA_BY_ID } from "@/lib/chronology";
 import { CHARACTER_LABELS, HEROES } from "@/lib/heroes";
 import { MOVIES, themeFor } from "@/lib/movies";
-import { PHASES } from "@/lib/universes";
+import { eraTheme, PHASES } from "@/lib/universes";
 import type { HeroId, PhaseId, Theme, TrackedMovie, UniverseId } from "@/lib/types";
 import {
   FilterBar,
@@ -229,10 +230,42 @@ export function Tracker({
   // Group into chapters, except when a search or hero filter makes a flat list
   // of results the clearer answer.
   const isChrono = view === "mcu" && order === "chrono";
-  const grouped = !isChrono && !query.trim() && !hero;
+  // Era chapters only mean anything while the list really is in story order.
+  // Picking a rating or title sort overrides the chronology (see sortMovies),
+  // and chaptering that would cut the sort into six unrelated runs.
+  const inStoryOrder = isChrono && sort.startsWith("release");
+  const grouped = (!isChrono || inStoryOrder) && !query.trim() && !hero;
 
   const groups: Group[] = useMemo(() => {
     if (!grouped) return [];
+
+    if (inStoryOrder) {
+      // Story order is chaptered by era rather than by phase — the phases
+      // interleave once the list is sorted by story, so they ride on each card
+      // instead. See the era block in lib/chronology.ts.
+      const byEra = new Map<string, TrackedMovie[]>();
+      for (const movie of visible) {
+        const key = ERA_BY_ID.get(movie.id);
+        if (!key) continue;
+        const bucket = byEra.get(key);
+        if (bucket) bucket.push(movie);
+        else byEra.set(key, [movie]);
+      }
+
+      return CHRONO_ERAS.flatMap((era) => {
+        const inEra = byEra.get(era.key);
+        if (!inEra) return [];
+        return [
+          {
+            key: `era-${era.key}`,
+            label: era.label,
+            sub: era.sub,
+            theme: eraTheme(era.key),
+            movies: inEra,
+          },
+        ];
+      });
+    }
 
     if (view === "mcu") {
       return PHASES.map((phase) => {
@@ -264,7 +297,7 @@ export function Tracker({
         movies: list,
       }))
       .sort((a, b) => a.movies[0].releaseDate.localeCompare(b.movies[0].releaseDate));
-  }, [grouped, view, visible]);
+  }, [grouped, inStoryOrder, view, visible]);
 
   // ── Counts ────────────────────────────────────────────────────────────────
   const perPhase = useMemo(() => {
@@ -387,16 +420,25 @@ export function Tracker({
               onModeChange={setMode}
               resultCount={visible.length}
             />
-            <div className="glass border-b border-white/8">
-              <div className="mx-auto max-w-[1500px] px-4 py-1.5 sm:px-6">
-                <HeroRail active={hero} counts={heroCounts} onChange={setHero} />
-              </div>
-            </div>
           </>
         ) : null}
       </div>
 
-      <main className="relative mx-auto max-w-[1500px] px-4 pt-8 pb-28 sm:px-6">
+      {/*
+        The hero rail scrolls away rather than sticking. Header plus filters
+        plus rail pinned together took more than half a phone screen before a
+        single poster appeared, and of the three the rail is the one you set
+        once and stop looking at.
+      */}
+      {view !== "stats" ? (
+        <div className="glass border-b border-white/8">
+          <div className="mx-auto max-w-[1500px] px-4 py-1.5 sm:px-6">
+            <HeroRail active={hero} counts={heroCounts} onChange={setHero} />
+          </div>
+        </div>
+      ) : null}
+
+      <main className="relative mx-auto max-w-[1500px] px-4 pt-6 pb-28 sm:pt-8 sm:px-6">
         {signedIn ? <ClaimLegacy profiles={legacyProfiles} /> : <GuestBanner count={guestWatched.length} />}
 
         {merged !== null && merged > 0 ? (
@@ -448,7 +490,7 @@ export function Tracker({
                 <CardGrid
                   movies={group.movies}
                   watchedSet={watchedSet}
-                  chrono={false}
+                  chrono={inStoryOrder}
                   baseDelay={groupIndex * 40}
                   onToggle={handleToggle}
                   onOpen={setActiveMovie}
@@ -530,6 +572,9 @@ function CardGrid({
           movie={movie}
           theme={themeFor(movie)}
           order={chrono ? (movie.chronoOrder ?? 0) : (CATALOG_NUMBER.get(movie.id) ?? 0)}
+          // Story order is the one view not already grouped by phase, so the
+          // card is where the phase has to be readable.
+          phaseTag={chrono && movie.phase ? `P${movie.phase}` : undefined}
           watched={watchedSet.has(movie.id)}
           delay={Math.min(baseDelay + index * 28, 480)}
           priority={baseDelay === 0 && index < 5}
@@ -591,14 +636,20 @@ function ChapterHeader({
         />
 
         <div className="relative flex flex-wrap items-end gap-3 sm:gap-5">
-          <div className="min-w-0 flex-1">
+          {/*
+            The title takes a row of its own on a phone. Sharing one with the
+            count and the batch button left it a sliver — an era name like
+            "Before the Age of Heroes" came out five lines tall with its
+            subtitle truncated to nothing.
+          */}
+          <div className="w-full min-w-0 sm:w-auto sm:flex-1">
             <h2
-              className="font-display text-2xl leading-none tracking-wide uppercase sm:text-3xl"
+              className="font-display text-xl leading-[1.05] tracking-wide uppercase sm:text-3xl sm:leading-none"
               style={{ color: theme.accent }}
             >
               {group.label}
             </h2>
-            <p className="mt-1.5 truncate font-mono text-[10px] tracking-brand text-mist uppercase">
+            <p className="mt-1.5 font-mono text-[10px] tracking-brand text-mist uppercase sm:truncate">
               {group.sub}
             </p>
           </div>
