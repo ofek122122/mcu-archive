@@ -29,10 +29,35 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
+const DESCRIPTION =
+  "Every Marvel film and series — Marvel Studios, Fox, Sony and Marvel Television — in release order or in story order, with your watch log kept across devices.";
+
 export const metadata: Metadata = {
-  title: "MCU Archive — Marvel Movie Tracker",
-  description:
-    "A private tracker for every Marvel Cinematic Universe film, Phase One through Phase Six.",
+  // Absolute URLs for the OG card and the manifest. Vercel injects the branch
+  // URL on previews, so a preview links to itself rather than to production.
+  metadataBase: new URL(
+    process.env.VERCEL_ENV === "production" || !process.env.VERCEL_URL
+      ? "https://www.mcuarchive.xyz"
+      : `https://${process.env.VERCEL_URL}`,
+  ),
+  title: {
+    default: "MCU Archive — every Marvel film and series",
+    template: "%s — MCU Archive",
+  },
+  description: DESCRIPTION,
+  applicationName: "MCU Archive",
+  openGraph: {
+    type: "website",
+    siteName: "MCU Archive",
+    title: "MCU Archive — every Marvel film and series",
+    description: DESCRIPTION,
+    url: "/",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "MCU Archive — every Marvel film and series",
+    description: DESCRIPTION,
+  },
 };
 
 export const viewport: Viewport = {

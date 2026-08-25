@@ -5,6 +5,7 @@ import { BarChart3, Clapperboard, Database, DatabaseZap, Dices, Layers, LogIn, S
 import Link from "next/link";
 
 import { PHASES } from "@/lib/universes";
+import { Logo } from "@/components/logo";
 
 export type ViewId = "all" | "mcu" | "stats";
 
@@ -66,15 +67,7 @@ export function ProgressHeader({
           keep their text labels. Above sm it all sits on one line as before.
         */}
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 sm:flex-nowrap">
-          {/* Wordmark */}
-          <div className="flex shrink-0 items-center gap-2.5">
-            <span className="bg-marvel px-2 py-1 font-display text-base leading-none text-white -skew-x-6 shadow-[0_0_18px_rgba(226,54,54,0.5)]">
-              MCU
-            </span>
-            <span className="hidden font-display text-base leading-none tracking-wide text-bone uppercase lg:inline">
-              Archive
-            </span>
-          </div>
+          <Logo />
 
           {/* View navigation */}
           <nav

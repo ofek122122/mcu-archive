@@ -164,7 +164,13 @@ app/
   page.tsx          Loads the catalog for a guest or a signed-in account
   layout.tsx        Fonts, metadata, parallax backdrop mount
   globals.css       Tailwind v4 theme, glass + parallax utilities, keyframes
+  icon.tsx          Favicon, rasterised from the mark
+  apple-icon.tsx    iOS home-screen icon
+  opengraph-image.tsx  Link preview card, counts read from the catalog
+  manifest.ts       Installable-app manifest
+assets/fonts/       Anton + Barlow TTFs, for the OG card only
 components/
+  logo.tsx               The mark, and the header lockup
   parallax-backdrop.tsx  Multi-layer cosmic parallax (client)
   signup-prompt.tsx      First-tick nudge for guests
   claim-legacy.tsx       One-time migration of a pre-Clerk PIN profile
@@ -186,6 +192,7 @@ components/
   imdb-badge.tsx         IMDb wordmark + star rating chip
 lib/
   types.ts          Shared domain types
+  brand.ts          The mark's geometry — one source for logo, favicon and OG
   catalog-mcu.ts    Marvel Studios films, Phase One → Six (40)
   catalog-series.ts Marvel Studios series and specials, Disney+ (20)
   catalog-marvel.ts Fox / Sony / Universal / New Line / Lionsgate films (39)
@@ -196,6 +203,7 @@ lib/
   heroes.ts         Character roster for the filter pills
   posters.ts        Movie id → TMDB poster path
   region.ts         Geo-IP region detection
+  use-scroll-lock.ts  Freezes the page behind a modal or sheet
   watch-providers.ts  TMDB/JustWatch availability, Redis-cached
   redis.ts          Shared Upstash client (with in-memory dev fallback)
   kv.ts             Per-user watched sets
@@ -431,6 +439,23 @@ lists, writing through one variadic `SADD`/`SREM` rather than N round trips.
 
 **Infinity Roulette** draws a random *unwatched* film from whatever the current filter
 shows, so it respects the view you are in.
+
+### The mark
+
+Five bars stepping up left to right, sheared forward, in the colours the progress meter runs
+through — arc-reactor cyan, titanium teal, infinity violet, quantum red, ember. It is the
+app's own phase gradient turned into a logo: a slate you work through, in the order the story
+happens. The shear is what stops it reading as a bar chart, and it echoes the `-skew-x-6` the
+wordmark has always had.
+
+It replaces a red skewed "MCU" chip, which was a passable imitation of Marvel's own wordmark
+and not a good look for a fan tracker.
+
+The geometry lives once, in `lib/brand.ts`. `components/logo.tsx` renders it as JSX for the
+header; `app/icon.tsx`, `app/apple-icon.tsx` and `app/opengraph-image.tsx` rasterise the same
+markup through Satori, so the favicon and the header cannot drift apart — edit the bars and
+every surface follows on the next build. The OG card also reads its counts from the catalog,
+so adding a title updates the link preview rather than quietly making it wrong.
 
 ### URL state
 
