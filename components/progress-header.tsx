@@ -8,10 +8,10 @@ import { PHASES } from "@/lib/universes";
 
 export type ViewId = "all" | "mcu" | "stats";
 
-const VIEWS: { id: ViewId; label: string; short: string; icon: typeof Layers }[] = [
-  { id: "all", label: "All Marvel", short: "All", icon: Layers },
-  { id: "mcu", label: "MCU Timeline", short: "MCU", icon: Clapperboard },
-  { id: "stats", label: "Stats & Vault", short: "Stats", icon: BarChart3 },
+const VIEWS: { id: ViewId; label: string; icon: typeof Layers }[] = [
+  { id: "all", label: "All Marvel", icon: Layers },
+  { id: "mcu", label: "MCU Timeline", icon: Clapperboard },
+  { id: "stats", label: "Stats & Vault", icon: BarChart3 },
 ];
 
 type ProgressHeaderProps = {
@@ -60,7 +60,12 @@ export function ProgressHeader({
   return (
     <header className="glass-strong border-b border-white/10">
       <div className="mx-auto max-w-[1500px] px-4 pt-3 pb-2.5 sm:px-6">
-        <div className="flex items-center justify-between gap-3">
+        {/*
+          On a phone the nav wraps onto its own full-width row (`order-last`),
+          which is what buys the wordmark and the right cluster enough room to
+          keep their text labels. Above sm it all sits on one line as before.
+        */}
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 sm:flex-nowrap">
           {/* Wordmark */}
           <div className="flex shrink-0 items-center gap-2.5">
             <span className="bg-marvel px-2 py-1 font-display text-base leading-none text-white -skew-x-6 shadow-[0_0_18px_rgba(226,54,54,0.5)]">
@@ -74,7 +79,7 @@ export function ProgressHeader({
           {/* View navigation */}
           <nav
             aria-label="Views"
-            className="no-scrollbar flex items-center gap-0.5 overflow-x-auto rounded-lg border border-white/10 bg-void/50 p-0.5 backdrop-blur-md"
+            className="no-scrollbar order-last flex w-full items-center gap-0.5 overflow-x-auto rounded-lg border border-white/10 bg-void/50 p-0.5 backdrop-blur-md sm:order-none sm:w-auto"
           >
             {VIEWS.map((item) => {
               const Icon = item.icon;
@@ -85,13 +90,12 @@ export function ProgressHeader({
                   type="button"
                   aria-current={active ? "page" : undefined}
                   onClick={() => onViewChange(item.id)}
-                  className={`flex shrink-0 cursor-pointer items-center gap-1.5 rounded-md px-2.5 py-1.5 font-display text-xs tracking-wider whitespace-nowrap uppercase transition-colors sm:px-3.5 sm:text-sm ${
+                  className={`flex flex-1 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-md px-2.5 py-1.5 font-display text-xs tracking-wider whitespace-nowrap uppercase transition-colors sm:flex-none sm:justify-start sm:px-3.5 sm:text-sm ${
                     active ? "bg-bone text-void" : "text-mist hover:text-bone"
                   }`}
                 >
                   <Icon className="size-3.5" />
-                  <span className="hidden sm:inline">{item.label}</span>
-                  <span className="sm:hidden">{item.short}</span>
+                  {item.label}
                 </button>
               );
             })}
@@ -110,12 +114,10 @@ export function ProgressHeader({
                   : "Infinity Roulette — pick something to watch"
               }
               aria-label="Infinity Roulette"
-              className="group relative flex size-8 cursor-pointer items-center justify-center rounded-lg border border-gold/50 bg-gold/10 text-gold transition-all hover:bg-gold/20 hover:shadow-[0_0_22px_rgba(245,197,24,0.5)] disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-transparent disabled:text-mist/40 disabled:shadow-none sm:w-auto sm:gap-1.5 sm:px-3"
+              className="group relative flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-gold/50 bg-gold/10 px-2.5 text-gold transition-all hover:bg-gold/20 hover:shadow-[0_0_22px_rgba(245,197,24,0.5)] disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-transparent disabled:text-mist/40 disabled:shadow-none sm:px-3"
             >
               <Dices className="size-4 transition-transform group-enabled:group-hover:rotate-180 group-enabled:group-hover:duration-500" />
-              <span className="hidden font-display text-xs tracking-widest uppercase sm:inline">
-                Roulette
-              </span>
+              <span className="font-display text-xs tracking-widest uppercase">Roulette</span>
             </button>
 
             <div className="hidden items-baseline gap-1.5 leading-none md:flex">
@@ -180,12 +182,10 @@ export function ProgressHeader({
                 <SignInButton mode="modal">
                   <button
                     type="button"
-                    className="flex size-8 cursor-pointer items-center justify-center rounded-lg border border-white/10 text-mist transition-colors hover:border-arc/50 hover:text-bone sm:w-auto sm:gap-1.5 sm:px-3"
+                    className="flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-white/10 px-2.5 text-mist transition-colors hover:border-arc/50 hover:text-bone sm:px-3"
                   >
                     <LogIn className="size-3.5" />
-                    <span className="hidden font-display text-xs tracking-wider uppercase sm:inline">
-                      Sign in
-                    </span>
+                    <span className="font-display text-xs tracking-wider uppercase">Sign in</span>
                   </button>
                 </SignInButton>
 

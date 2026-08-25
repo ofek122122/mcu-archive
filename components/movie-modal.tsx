@@ -48,18 +48,31 @@ export function MovieModal({ movie, theme, region, watched, onToggle, onClose }:
 
   const showArt = Boolean(movie.posterUrl) && !artFailed;
   const isSeries = movie.kind === "series";
+  const shape = isSeries
+    ? movie.seasons && movie.seasons > 1
+      ? `${movie.seasons} seasons · ${movie.episodes} eps`
+      : `${movie.episodes} ${movie.episodes === 1 ? "special" : "episodes"}`
+    : movie.runtime
+      ? `${movie.runtime} min`
+      : "Runtime TBA";
 
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-labelledby="movie-modal-title"
-      className="fixed inset-0 z-100 flex items-end justify-center overflow-y-auto bg-void/75 p-0 backdrop-blur-md sm:items-center sm:p-6"
+      className="fixed inset-0 z-100 flex items-end justify-center bg-void/75 backdrop-blur-md sm:items-center sm:p-6"
       onClick={onClose}
     >
+      {/*
+        The panel is the scroll container, not the backdrop. Scrolling the
+        backdrop instead stranded the top of a tall panel above the scrollable
+        area — flex `items-end` pins the overflow out of reach — which on a
+        phone put the close button off-screen with no way to scroll back to it.
+      */}
       <div
         onClick={(event) => event.stopPropagation()}
-        className="glass-strong glass-edge animate-rise relative w-full max-w-2xl overflow-hidden rounded-t-2xl sm:rounded-2xl"
+        className="glass-strong glass-edge animate-rise relative flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl sm:max-h-[86dvh] sm:rounded-2xl"
         style={
           {
             "--edge-from": `${theme.accent}bb`,
@@ -76,20 +89,40 @@ export function MovieModal({ movie, theme, region, watched, onToggle, onClose }:
           }}
         />
 
-        <button
-          ref={closeRef}
-          type="button"
-          onClick={onClose}
-          aria-label="Close details"
-          className="absolute top-3 right-3 z-20 flex size-9 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-void/60 text-mist backdrop-blur-sm transition-colors hover:border-white/30 hover:text-bone"
-        >
-          <X className="size-4" />
-        </button>
+        {/* Sheet header — pinned, so the way out never scrolls away. */}
+        <div className="relative z-20 flex shrink-0 items-center gap-3 border-b border-white/8 px-4 pt-4 pb-2.5 sm:px-7 sm:pt-3">
+          <span
+            aria-hidden="true"
+            className="absolute top-1.5 left-1/2 h-1 w-9 -translate-x-1/2 rounded-full bg-white/20 sm:hidden"
+          />
+          <p
+            className="min-w-0 flex-1 truncate font-mono text-[10px] tracking-brand uppercase"
+            style={{ color: theme.accent }}
+          >
+            {theme.label} <span className="text-mist/50">·</span> {movie.studio}
+          </p>
+          <button
+            ref={closeRef}
+            type="button"
+            onClick={onClose}
+            aria-label="Close details"
+            className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-white/10 bg-void/60 px-3 py-1.5 font-mono text-[10px] tracking-brand text-mist uppercase backdrop-blur-sm transition-colors hover:border-white/30 hover:text-bone"
+          >
+            <X className="size-3.5" />
+            Close
+          </button>
+        </div>
 
-        <div className="relative flex flex-col gap-5 p-5 sm:flex-row sm:gap-6 sm:p-7">
+        {/*
+          Two columns at both sizes, but on a phone everything below the title
+          spans the full width instead of squeezing into the strip beside the
+          poster. One DOM either way — a per-breakpoint copy of the body would
+          also duplicate the where-to-watch fetch.
+        */}
+        <div className="relative grid min-h-0 flex-1 grid-cols-[6rem_1fr] content-start gap-x-4 gap-y-5 overflow-y-auto overscroll-contain p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:grid-cols-[10rem_1fr] sm:gap-x-6 sm:p-7">
           {/* Poster */}
           <div
-            className="relative aspect-[2/3] w-28 shrink-0 self-start overflow-hidden rounded-lg sm:w-40"
+            className="relative aspect-[2/3] w-full self-start overflow-hidden rounded-lg"
             style={{
               background: `linear-gradient(158deg, ${theme.accent}38 0%, ${theme.deep} 46%, #04040a 100%)`,
             }}
@@ -115,21 +148,18 @@ export function MovieModal({ movie, theme, region, watched, onToggle, onClose }:
             ) : null}
           </div>
 
-          {/* Details */}
-          <div className="min-w-0 flex-1">
-            <p
-              className="font-mono text-[10px] tracking-brand uppercase"
-              style={{ color: theme.accent }}
-            >
-              {theme.label} <span className="text-mist/50">·</span> {movie.studio}
-            </p>
-
+          {/* Title block — sits beside the poster at every width */}
+          <div className="min-w-0 self-start">
             <h2
               id="movie-modal-title"
-              className="mt-2 pr-10 font-display text-2xl leading-[1.05] tracking-wide text-bone uppercase sm:text-3xl"
+              className="font-display text-xl leading-[1.05] tracking-wide text-bone uppercase sm:text-3xl"
             >
               {movie.title}
             </h2>
+
+            <p className="mt-2 font-mono text-[11px] text-mist">
+              {movie.year} <span className="text-mist/50">/</span> {shape}
+            </p>
 
             <div className="mt-3 flex flex-wrap items-center gap-2.5">
               <ImdbBadge rating={movie.imdbRating} size="md" />
@@ -142,8 +172,11 @@ export function MovieModal({ movie, theme, region, watched, onToggle, onClose }:
                 </span>
               ) : null}
             </div>
+          </div>
 
-            <p className="mt-4 text-sm leading-relaxed text-mist">{movie.synopsis}</p>
+          {/* The rest: full width on a phone, beside the poster above sm */}
+          <div className="col-span-2 min-w-0 sm:col-span-1 sm:col-start-2">
+            <p className="text-sm leading-relaxed text-mist">{movie.synopsis}</p>
 
             <dl className="mt-5 grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
               <Fact

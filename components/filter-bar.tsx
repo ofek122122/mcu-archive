@@ -90,9 +90,17 @@ export function FilterBar({
   return (
     <div className="glass border-b border-white/8">
       <div className="mx-auto flex max-w-[1500px] flex-col gap-2.5 px-4 py-2.5 sm:px-6">
-        {/* Row 1 — search, status, sort, density */}
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative min-w-[180px] flex-1">
+        {/*
+          Row 1 — search, then the control groups.
+
+          On a phone the search takes a row of its own and the groups sit in a
+          scrolling strip below it, the same pattern row 2 already uses. That
+          strip is what pays for the labels: these used to collapse to bare
+          icons on small screens, where three near-identical glyphs said
+          nothing about what they filtered.
+        */}
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+          <div className="relative w-full sm:min-w-[180px] sm:flex-1">
             <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-mist/60" />
             <input
               type="search"
@@ -114,11 +122,12 @@ export function FilterBar({
             ) : null}
           </div>
 
+          <div className="no-scrollbar -mx-1 flex items-center gap-2 overflow-x-auto px-1 sm:contents">
           {/* Films vs series — excluding one drops it from progress counts too */}
           <div
             role="group"
             aria-label="Filter by type"
-            className="flex items-center gap-0.5 rounded-lg border border-white/10 bg-void/50 p-0.5 backdrop-blur-md"
+            className="flex shrink-0 items-center gap-0.5 rounded-lg border border-white/10 bg-void/50 p-0.5 backdrop-blur-md"
           >
             {KIND_OPTIONS.map((option) => {
               const Icon = option.icon;
@@ -135,7 +144,7 @@ export function FilterBar({
                   }`}
                 >
                   <Icon className="size-3" />
-                  <span className="hidden lg:inline">{option.label}</span>
+                  {option.label}
                 </button>
               );
             })}
@@ -144,7 +153,7 @@ export function FilterBar({
           <div
             role="group"
             aria-label="Filter by status"
-            className="flex items-center gap-0.5 rounded-lg border border-white/10 bg-void/50 p-0.5 backdrop-blur-md"
+            className="flex shrink-0 items-center gap-0.5 rounded-lg border border-white/10 bg-void/50 p-0.5 backdrop-blur-md"
           >
             {STATUS_OPTIONS.map((option) => {
               const Icon = option.icon;
@@ -160,13 +169,13 @@ export function FilterBar({
                   }`}
                 >
                   <Icon className="size-3" />
-                  <span className="hidden sm:inline">{option.label}</span>
+                  {option.label}
                 </button>
               );
             })}
           </div>
 
-          <label className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-void/50 px-2 py-1.5 backdrop-blur-md">
+          <label className="flex shrink-0 items-center gap-1.5 rounded-lg border border-white/10 bg-void/50 px-2 py-1.5 backdrop-blur-md">
             <ArrowDownUp className="size-3 text-mist" />
             <span className="sr-only">Sort by</span>
             <select
@@ -185,29 +194,29 @@ export function FilterBar({
           <div
             role="group"
             aria-label="View density"
-            className="flex items-center gap-0.5 rounded-lg border border-white/10 bg-void/50 p-0.5 backdrop-blur-md"
+            className="flex shrink-0 items-center gap-0.5 rounded-lg border border-white/10 bg-void/50 p-0.5 backdrop-blur-md"
           >
             <button
               type="button"
               aria-pressed={mode === "posters"}
               onClick={() => onModeChange("posters")}
-              title="Cinematic posters"
-              className={`flex cursor-pointer items-center gap-1.5 rounded-md px-2.5 py-1.5 font-mono text-[10px] uppercase transition-colors ${
+              className={`flex cursor-pointer items-center gap-1.5 rounded-md px-2.5 py-1.5 font-mono text-[10px] tracking-brand uppercase transition-colors ${
                 mode === "posters" ? "bg-bone text-void" : "text-mist hover:text-bone"
               }`}
             >
               <LayoutGrid className="size-3" />
+              Posters
             </button>
             <button
               type="button"
               aria-pressed={mode === "compact"}
               onClick={() => onModeChange("compact")}
-              title="Compact checklist"
-              className={`flex cursor-pointer items-center gap-1.5 rounded-md px-2.5 py-1.5 font-mono text-[10px] uppercase transition-colors ${
+              className={`flex cursor-pointer items-center gap-1.5 rounded-md px-2.5 py-1.5 font-mono text-[10px] tracking-brand uppercase transition-colors ${
                 mode === "compact" ? "bg-bone text-void" : "text-mist hover:text-bone"
               }`}
             >
               <List className="size-3" />
+              List
             </button>
           </div>
 
@@ -217,6 +226,7 @@ export function FilterBar({
           >
             {resultCount} {resultCount === 1 ? "film" : "films"}
           </span>
+          </div>
         </div>
 
         {/* Row 2 — universe multi-select, or MCU phase + order controls */}
