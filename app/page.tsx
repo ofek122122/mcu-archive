@@ -6,6 +6,7 @@ import { countWatched, getWatchedMovies, isDatabaseConnected } from "@/lib/kv";
 import { listUsers } from "@/lib/legacy-users";
 import { withReleaseStatus } from "@/lib/movies";
 import { detectRegion } from "@/lib/region";
+import { StructuredData } from "@/components/structured-data";
 import { Tracker } from "@/components/tracker";
 import type { LegacyProfile } from "@/components/claim-legacy";
 
@@ -36,18 +37,32 @@ export default async function HomePage() {
   const movies = withReleaseStatus();
 
   return (
-    // Tracker reads its initial filter state from the URL via useSearchParams,
-    // which Next requires to sit inside a Suspense boundary.
-    <Suspense fallback={null}>
-      <Tracker
-        movies={movies}
-        watched={watched}
-        signedIn={Boolean(userId)}
-        isAdmin={admin}
-        region={region}
-        legacyProfiles={legacyProfiles}
-        databaseConnected={isDatabaseConnected()}
-      />
-    </Suspense>
+    <>
+      <StructuredData />
+
+      {/*
+        The page had no h1 at all — the chapter headers are h2s and the logo is
+        an image. Visually hidden because the header already says what this is
+        far better than a line of text would, but a document with no top-level
+        heading is a hole for both search engines and screen readers.
+      */}
+      <h1 className="sr-only">
+        MCU Archive — every Marvel film and series in release order or story order
+      </h1>
+
+      {/* Tracker reads its initial filter state from the URL via
+          useSearchParams, which Next requires inside a Suspense boundary. */}
+      <Suspense fallback={null}>
+        <Tracker
+          movies={movies}
+          watched={watched}
+          signedIn={Boolean(userId)}
+          isAdmin={admin}
+          region={region}
+          legacyProfiles={legacyProfiles}
+          databaseConnected={isDatabaseConnected()}
+        />
+      </Suspense>
+    </>
   );
 }

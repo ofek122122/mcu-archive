@@ -4,6 +4,7 @@ import { Anton, Barlow, JetBrains_Mono } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { dark } from "@clerk/themes";
 
+import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 import { ParallaxBackdrop } from "@/components/parallax-backdrop";
 
 import "./globals.css";
@@ -29,35 +30,37 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
-const DESCRIPTION =
-  "Every Marvel film and series — Marvel Studios, Fox, Sony and Marvel Television — in release order or in story order, with your watch log kept across devices.";
+const TITLE = "MCU Archive — every Marvel film and series";
 
 export const metadata: Metadata = {
   // Absolute URLs for the OG card and the manifest. Vercel injects the branch
   // URL on previews, so a preview links to itself rather than to production.
-  metadataBase: new URL(
-    process.env.VERCEL_ENV === "production" || !process.env.VERCEL_URL
-      ? "https://www.mcuarchive.xyz"
-      : `https://${process.env.VERCEL_URL}`,
-  ),
-  title: {
-    default: "MCU Archive — every Marvel film and series",
-    template: "%s — MCU Archive",
-  },
-  description: DESCRIPTION,
-  applicationName: "MCU Archive",
+  metadataBase: new URL(SITE_URL),
+  title: { default: TITLE, template: "%s — MCU Archive" },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  // Every filter combination is a query string on this one page. Without a
+  // canonical, `?view=mcu&order=chrono&phase=4` and a dozen others look like
+  // separate near-identical pages and split whatever authority the site has.
+  alternates: { canonical: "/" },
   openGraph: {
     type: "website",
-    siteName: "MCU Archive",
-    title: "MCU Archive — every Marvel film and series",
-    description: DESCRIPTION,
+    siteName: SITE_NAME,
+    title: TITLE,
+    description: SITE_DESCRIPTION,
     url: "/",
   },
   twitter: {
     card: "summary_large_image",
-    title: "MCU Archive — every Marvel film and series",
-    description: DESCRIPTION,
+    title: TITLE,
+    description: SITE_DESCRIPTION,
   },
+  // Set GOOGLE_SITE_VERIFICATION in Vercel to the token Search Console gives
+  // you; the meta tag then appears on every page. Left out entirely when unset,
+  // rather than emitting an empty tag that fails verification confusingly.
+  verification: process.env.GOOGLE_SITE_VERIFICATION
+    ? { google: process.env.GOOGLE_SITE_VERIFICATION }
+    : undefined,
 };
 
 export const viewport: Viewport = {
